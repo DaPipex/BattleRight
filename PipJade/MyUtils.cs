@@ -27,6 +27,21 @@ namespace PipJade
             return enemiesAround;
         }
 
+        public static int EnemiesAround(this ActiveGameObject obj, float range)
+        {
+            int enemiesAround = 0;
+
+            foreach (var enemy in EntitiesManager.EnemyTeam)
+            {
+                if (!enemy.IsDead && Vector2.Distance(obj.WorldPosition, enemy.WorldPosition) <= range)
+                {
+                    enemiesAround++;
+                }
+            }
+
+            return enemiesAround;
+        }
+
         public static bool CanCastAbility(AbilitySlot slot)
         {
             //var abilityHudData = LocalPlayer.GetAbilityHudData(slot);

@@ -11,6 +11,7 @@ using BattleRight.Core.Math;
 
 using BattleRight.SDK;
 using BattleRight.SDK.Enumeration;
+using BattleRight.SDK.Events;
 using BattleRight.SDK.UI;
 using BattleRight.SDK.UI.Models;
 using BattleRight.SDK.UI.Values;
@@ -21,7 +22,7 @@ namespace PipJade
     {
         private static readonly string HeroCharName = "Gunner";
 
-        private static Menu JadeMenu;
+        private static Menu JadeMenu = null;
 
         private static Player JadeHero;
 
@@ -110,46 +111,47 @@ namespace PipJade
         public static void Init()
         {
             //LoadMenu();
-            JadeMenu = MainMenu.AddMenu(new Menu("pipjademenu", "DaPipex's Jade"));
+            var _jadeMenu = MainMenu.AddMenu(new Menu("pipjademenu", "DaPipex's Jade"));
             //Console.WriteLine("Added to lmao menu!");
 
-            JadeMenu.AddLabel("Basic Combo");
-            var mComboUseM1 = JadeMenu.Add(new MenuCheckBox("combo.useM1", "Use Left-Mouse (Revolver Shot)", true));
-            var mComboUseM2 = JadeMenu.Add(new MenuCheckBox("combo.useM2", "Use Right-Mouse (Snipe)", true));
-            //var mComboUseSpace = JadeMenu.Add(new MenuCheckBox("combo.useSpace", "Use Space (Blast Vault)", false));
-            var mComboUseR = JadeMenu.Add(new MenuCheckBox("combo.useR", "Use R (Junk Shot)", true));
-            var mComboUseEX1 = JadeMenu.Add(new MenuCheckBox("combo.useEX1", "Use EX1 (Snap Shot)", true));
-            var mComboUseF = JadeMenu.Add(new MenuCheckBox("combo.useF", "Use F (Explosive Shells)", true));
-            var mComboUseNewPred = JadeMenu.Add(new MenuCheckBox("combo.useNewPred", "Use new prediction (EXPERIMENTAL)", false));
+            _jadeMenu.AddLabel("Basic Combo");
+            var mComboUseM1 = _jadeMenu.Add(new MenuCheckBox("combo.useM1", "Use Left-Mouse (Revolver Shot)", true));
+            var mComboUseM2 = _jadeMenu.Add(new MenuCheckBox("combo.useM2", "Use Right-Mouse (Snipe)", true));
+            //var mComboUseSpace = _jadeMenu.Add(new MenuCheckBox("combo.useSpace", "Use Space (Blast Vault)", false));
+            var mComboUseR = _jadeMenu.Add(new MenuCheckBox("combo.useR", "Use R (Junk Shot)", true));
+            var mComboUseEX1 = _jadeMenu.Add(new MenuCheckBox("combo.useEX1", "Use EX1 (Snap Shot)", true));
+            var mComboUseF = _jadeMenu.Add(new MenuCheckBox("combo.useF", "Use F (Explosive Shells)", true));
+            var mComboUseNewPred = _jadeMenu.Add(new MenuCheckBox("combo.useNewPred", "Use new prediction (EXPERIMENTAL)", false));
 
-            JadeMenu.AddSeparator(10f);
+            _jadeMenu.AddSeparator(10f);
 
-            JadeMenu.AddLabel("Misc");
-            var mMiscUseE = JadeMenu.Add(new MenuCheckBox("misc.useE", "Use E (Disabling Shot) to interrupt", true));
+            _jadeMenu.AddLabel("Misc");
+            var mMiscUseE = _jadeMenu.Add(new MenuCheckBox("misc.useE", "Use E (Disabling Shot) to interrupt", true));
 
-            JadeMenu.AddSeparator(10f);
+            _jadeMenu.AddSeparator(10f);
 
-            JadeMenu.AddLabel("Drawings");
-            var mDrawRangeM1 = JadeMenu.Add(new MenuCheckBox("draw.rangeM1", "Draw Left-Mouse range (Revolver Shot)", false)); //true
-            var mDrawRangeM2 = JadeMenu.Add(new MenuCheckBox("draw.rangeM2", "Draw Right-Mouse range (Snipe)", true));
-            //var mDrawRangeSpace = JadeMenu.Add(new MenuCheckBox("draw.rangeSpace", "Draw Space Range (Blast vault)", false));
-            var mDrawRangeE = JadeMenu.Add(new MenuCheckBox("draw.rangeE", "Draw E range (Disabling Shot)", true));
-            var mDrawRangeR = JadeMenu.Add(new MenuCheckBox("draw.rangeR", "Draw R range (Junk Shot)", false));
-            var mDrawRangeF = JadeMenu.Add(new MenuCheckBox("draw.rangeF", "Draw F range (Explosive Shells)", false));
+            _jadeMenu.AddLabel("Drawings");
+            var mDrawRangeM1 = _jadeMenu.Add(new MenuCheckBox("draw.rangeM1", "Draw Left-Mouse range (Revolver Shot)", false)); //true
+            var mDrawRangeM2 = _jadeMenu.Add(new MenuCheckBox("draw.rangeM2", "Draw Right-Mouse range (Snipe)", true));
+            //var mDrawRangeSpace = _jadeMenu.Add(new MenuCheckBox("draw.rangeSpace", "Draw Space Range (Blast vault)", false));
+            var mDrawRangeE = _jadeMenu.Add(new MenuCheckBox("draw.rangeE", "Draw E range (Disabling Shot)", true));
+            var mDrawRangeR = _jadeMenu.Add(new MenuCheckBox("draw.rangeR", "Draw R range (Junk Shot)", false));
+            var mDrawRangeF = _jadeMenu.Add(new MenuCheckBox("draw.rangeF", "Draw F range (Explosive Shells)", false));
 
-            JadeMenu.AddSeparator(10f);
+            _jadeMenu.AddSeparator(10f);
 
-            JadeMenu.AddLabel("Debug");
-            var mDebugProjSpeed = JadeMenu.Add(new MenuCheckBox("debug.projSpeed", "My last projectile's speed", false));
-            var mDebugProjCheckInterval = JadeMenu.Add(new MenuSlider("debug.projSpeedInterval", "^ Check interval", 200f, 250f, 60f));
-            var mDebugProjRange = JadeMenu.Add(new MenuCheckBox("debug.projRange", "My last projectile's range", false));
-            var mDebugNewPrediction = JadeMenu.Add(new MenuCheckBox("debug.newPrediction", "Enemies Prediction", false));
+            _jadeMenu.AddLabel("Debug");
+            var mDebugProjSpeed = _jadeMenu.Add(new MenuCheckBox("debug.projSpeed", "My last projectile's speed", false));
+            var mDebugProjCheckInterval = _jadeMenu.Add(new MenuSlider("debug.projSpeedInterval", "^ Check interval", 200f, 250f, 60f));
+            var mDebugProjRange = _jadeMenu.Add(new MenuCheckBox("debug.projRange", "My last projectile's range", false));
+            var mDebugNewPrediction = _jadeMenu.Add(new MenuCheckBox("debug.newPrediction", "Enemies Prediction", false));
+            _jadeMenu.Add(new MenuCheckBox("debug.Test", "Menu test", false));
 
             //Console.WriteLine("Menu loaded!");
 
-            Game.Instance.OnMatchStart += OnMatchStart;
-            Game.Instance.OnDraw += OnDraw;
-            Game.Instance.OnUpdate += delegate
+            CustomEvents.Instance.OnMatchStart += OnMatchStart;
+            CustomEvents.Instance.OnDraw += OnDraw;
+            CustomEvents.Instance.OnUpdate += delegate
             {
                 comboUseM1 = mComboUseM1.CurrentValue;
                 comboUseM2 = mComboUseM2.CurrentValue;
@@ -173,6 +175,7 @@ namespace PipJade
                 debugNewPrediction = mDebugNewPrediction.CurrentValue;
 
                 JadeHero = EntitiesManager.LocalPlayer;
+                JadeMenu = _jadeMenu;
 
                 OnUpdate();
             };
@@ -190,7 +193,11 @@ namespace PipJade
 
         private static void OnUpdate()
         {
-            //if (JadeMenu.Get<MenuCheckBox>("debug.Test").CurrentValue)
+            //if (JadeMenu == null)
+            //{
+            //    Console.WriteLine("JadeMenu is null");
+            //}
+            //else if (JadeMenu.Get<MenuCheckBox>("debug.Test").CurrentValue)
             //{
             //    Console.WriteLine("debug.Test is on!");
             //}
@@ -203,8 +210,6 @@ namespace PipJade
             {
                 return;
             }
-
-            JadeHero = EntitiesManager.LocalPlayer;
 
             if (UnityEngine.Input.GetKeyDown(UnityEngine.KeyCode.Keypad5))
             {
@@ -277,41 +282,6 @@ namespace PipJade
                 {
                     myLastProjPreviousPos = Vector2.Zero;
                 }
-
-                //switch (myLastProjAnalyseTimes)
-                //{
-                //    case 0:
-                //        myLastProjPos1 = myLastProj.WorldPosition;
-                //        myLastProjLastExamineT = Environment.TickCount;
-                //        myLastProjAnalyseTimes++;
-
-                //        Console.WriteLine(myLastProjPos1);
-                //        break;
-
-                //    case 1:
-                //        if (Environment.TickCount >= myLastProjLastExamineT + debugProjCheckInterval) //Doesn't go any lower than 62
-                //        {
-                //            myLastProjPos2 = myLastProj.WorldPosition;
-                //            myLastProjLastExamineT2 = Environment.TickCount;
-                //            myLastProjAnalyseTimes++;
-
-                //            Console.WriteLine(myLastProjPos2);
-                //        }
-                //        break;
-
-                //    case 2:
-                //        var distance = Vector2.Distance(myLastProjPos2, myLastProjPos1);
-                //        var time = UnityEngine.Time.deltaTime;
-
-                //        if (myLastProjPos2 != null)
-                //        {
-                //            Console.WriteLine(String.Format("Time used to measure: {0}ms \nDistance Traveled: {1} \nSpeed = {2}\n", time, distance, distance / (float)time * 1000f));
-                //        }
-
-                //        myLastProjAnalyseTimes = 0;
-                //        myLastProj = null;
-                //        break;
-                //}
             }
 
             
@@ -392,10 +362,8 @@ namespace PipJade
                         if (pred.HitChancePercent >= 25f)
                         {
                             LocalPlayer.UpdateCursorPosition(pred.MoveMousePosition);
-                            if (LocalPlayer.CastAbility(AbilitySlot.Ability5))
-                            {
-                                lastAbilityFired = AbilitySlot.Ability5;
-                            }
+                            LocalPlayer.CastAbility(AbilitySlot.Ability5);
+                            lastAbilityFired = AbilitySlot.Ability5;
                         }
                     }
                     else
@@ -407,10 +375,8 @@ namespace PipJade
                         if (pred.Hitchance >= NewPrediction.Enumerations.Hitchance.Medium)
                         {
                             LocalPlayer.UpdateCursorPosition(pred.MousePosition);
-                            if (LocalPlayer.CastAbility(AbilitySlot.Ability5))
-                            {
-                                lastAbilityFired = AbilitySlot.Ability5;
-                            }
+                            LocalPlayer.CastAbility(AbilitySlot.Ability5);
+                            lastAbilityFired = AbilitySlot.Ability5;
                         }
                     }
                 }
@@ -540,11 +506,8 @@ namespace PipJade
                     if (pred.HitChancePercent >= 25f)
                     {
                         LocalPlayer.UpdateCursorPosition(pred.MoveMousePosition);
-
-                        if (LocalPlayer.CastAbility(AbilitySlot.UltimateAbility))
-                        {
-                            lastAbilityFired = AbilitySlot.UltimateAbility;
-                        }
+                        LocalPlayer.CastAbility(AbilitySlot.UltimateAbility);
+                        lastAbilityFired = AbilitySlot.UltimateAbility;
                     }
                 }
                 else
@@ -556,11 +519,8 @@ namespace PipJade
                     if (pred.Hitchance >= NewPrediction.Enumerations.Hitchance.Medium)
                     {
                         LocalPlayer.UpdateCursorPosition(pred.MousePosition);
-
-                        if (LocalPlayer.CastAbility(AbilitySlot.UltimateAbility))
-                        {
-                            lastAbilityFired = AbilitySlot.UltimateAbility;
-                        }
+                        LocalPlayer.CastAbility(AbilitySlot.UltimateAbility);
+                        lastAbilityFired = AbilitySlot.UltimateAbility;
                     }
                 }
             }
@@ -574,10 +534,8 @@ namespace PipJade
                     if (pred.HitChancePercent >= 25f)
                     {
                         LocalPlayer.UpdateCursorPosition(pred.MoveMousePosition);
-                        if (LocalPlayer.CastAbility(AbilitySlot.EnergyAbility))
-                        {
-                            lastAbilityFired = AbilitySlot.EnergyAbility;
-                        }
+                        LocalPlayer.CastAbility(AbilitySlot.EnergyAbility);
+                        lastAbilityFired = AbilitySlot.EnergyAbility;
                     }
                 }
                 else
@@ -590,11 +548,12 @@ namespace PipJade
                     {
                         LocalPlayer.UpdateCursorPosition(pred.MousePosition);
                         LocalPlayer.CastAbility(AbilitySlot.EnergyAbility);
+                        lastAbilityFired = AbilitySlot.EnergyAbility;
                     }
                 }
             }
             //else if (((comboUseM2 && MyUtils.CanCastAbility(AbilitySlot.Ability2) && JadeHero.EnemiesAround(5f) == 0) || (JadeHero.IsCasting && JustFiredM2)) && targetM2_F != null)
-            if (comboUseM2 && MyUtils.CanCastAbility(AbilitySlot.Ability2) && JadeHero.EnemiesAround(4.5f) == 0 && lastAbilityFired == null && targetM2_F != null)
+            if (comboUseM2 && MyUtils.CanCastAbility(AbilitySlot.Ability2) && JadeHero.EnemiesAround(6.5f) == 0 && lastAbilityFired == null && targetM2_F != null)
             {
                 if (!comboUseNewPred)
                 {
@@ -603,10 +562,8 @@ namespace PipJade
                     if (pred.HitChancePercent >= 25f)
                     {
                         LocalPlayer.UpdateCursorPosition(pred.MoveMousePosition);
-                        if (LocalPlayer.CastAbility(AbilitySlot.Ability2))
-                        {
-                            lastAbilityFired = AbilitySlot.Ability2;
-                        }
+                        LocalPlayer.CastAbility(AbilitySlot.Ability2);
+                        lastAbilityFired = AbilitySlot.Ability2;
                     }
                 }
                 else
@@ -618,10 +575,8 @@ namespace PipJade
                     if (pred.Hitchance >= NewPrediction.Enumerations.Hitchance.Medium)
                     {
                         LocalPlayer.UpdateCursorPosition(pred.MousePosition);
-                        if (LocalPlayer.CastAbility(AbilitySlot.Ability2))
-                        {
-                            lastAbilityFired = AbilitySlot.Ability2;
-                        }
+                        LocalPlayer.CastAbility(AbilitySlot.Ability2);
+                        lastAbilityFired = AbilitySlot.Ability2;
                     }
                 }
             }
@@ -635,10 +590,8 @@ namespace PipJade
                     if (pred.HitChancePercent >= 25f)
                     {
                         LocalPlayer.UpdateCursorPosition(pred.MoveMousePosition);
-                        if (LocalPlayer.CastAbility(AbilitySlot.EXAbility1))
-                        {
-                            lastAbilityFired = AbilitySlot.EXAbility1;
-                        }
+                        LocalPlayer.CastAbility(AbilitySlot.EXAbility1);
+                        lastAbilityFired = AbilitySlot.EXAbility1;
                     }
                 }
                 else
@@ -650,10 +603,8 @@ namespace PipJade
                     if (pred.Hitchance >= NewPrediction.Enumerations.Hitchance.Medium)
                     {
                         LocalPlayer.UpdateCursorPosition(pred.MousePosition);
-                        if (LocalPlayer.CastAbility(AbilitySlot.EXAbility1))
-                        {
-                            lastAbilityFired = AbilitySlot.EXAbility1;
-                        }
+                        LocalPlayer.CastAbility(AbilitySlot.EXAbility1);
+                        lastAbilityFired = AbilitySlot.EXAbility1;
                     }
                 }
             }
@@ -696,14 +647,35 @@ namespace PipJade
 
             LocalPlayer.UpdateCursorPosition(orb);
 
-            if (Vector2.Distance(JadeHero.WorldPosition, orb.WorldPosition) <= M2ProjRange && orb.Health <= 12f && MyUtils.CanCastAbility(AbilitySlot.EXAbility1))
+            if (Vector2.Distance(JadeHero.WorldPosition, orb.WorldPosition) <= M2ProjRange)
             {
-                LocalPlayer.CastAbility(AbilitySlot.EXAbility1);
+                if (MyUtils.CanCastAbility(AbilitySlot.Ability2))
+                {
+                    if (orb.Health <= 38 && JadeHero.EnemiesAround(6f) == 0)
+                    {
+                        LocalPlayer.CastAbility(AbilitySlot.Ability2);
+                    }
+
+                    if (orb.Health <= 12f && JadeHero.Energy >= 25f)
+                    {
+                        LocalPlayer.CastAbility(AbilitySlot.EXAbility1);
+                    }
+                }
             }
 
             if (Vector2.Distance(JadeHero.WorldPosition, orb.WorldPosition) <= M1ProjRange)
             {
-                LocalPlayer.CastAbility(AbilitySlot.Ability1, 10);
+                if (orb.EnemiesAround(8f) == 0)
+                {
+                    LocalPlayer.CastAbility(AbilitySlot.Ability1, 10);
+                }
+                else
+                {
+                    if (orb.Health <= 6 * 4 || orb.Health >= 6 * 4 * 2)
+                    {
+                        LocalPlayer.CastAbility(AbilitySlot.Ability1, 10);
+                    }
+                }
             }
         }
 
