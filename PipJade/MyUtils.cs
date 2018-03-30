@@ -3,6 +3,8 @@ using BattleRight.Core.Enumeration;
 using BattleRight.Core.GameObjects;
 using BattleRight.Core.Math;
 using BattleRight.Core.Models;
+using BattleRight.SDK.UI.Models;
+using BattleRight.SDK.UI.Values;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -40,6 +42,34 @@ namespace PipJade
             }
 
             return enemiesAround;
+        }
+
+        public static bool GetBoolean(this Menu menu, string menuItem)
+        {
+            var item = menu.Get<MenuCheckBox>(menuItem);
+
+            if (item == null)
+            {
+                throw new Exception("GetBoolean: menuItem '" + menuItem + "' doesn't exist");
+            }
+            else
+            {
+                return item.CurrentValue;
+            }
+        }
+
+        public static float GetSlider(this Menu menu, string menuItem)
+        {
+            var item = menu.Get<MenuSlider>(menuItem);
+
+            if (item == null)
+            {
+                throw new Exception("GetSlider: menuItem '" + menuItem + "' doesn't exist");
+            }
+            else
+            {
+                return item.CurrentValue;
+            }
         }
 
         public static bool CanCastAbility(AbilitySlot slot)

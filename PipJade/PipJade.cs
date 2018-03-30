@@ -20,47 +20,11 @@ namespace PipJade
 {
     internal static class PipJade
     {
-        private static readonly string HeroCharName = "Gunner";
-
         private static Menu JadeMenu = null;
 
         private static Player JadeHero;
 
-        private static AbilityData Mouse1Ability;
-        private static AbilityData Mouse2Ability;
-        private static AbilityData SpaceAbility;
-        private static AbilityData EAbility;
-        private static AbilityData RAbility;
-        private static AbilityData EX1Ability;
-        private static AbilityData FAbility;
-
-        //TEMP MENU
-        //Combo
-        private static bool comboUseM1;
-        private static bool comboUseM2;
-        private static bool comboUseSpace;
-        private static bool comboUseR;
-        private static bool comboUseEX1;
-        private static bool comboUseF;
-        private static bool comboUseNewPred;
-
-        //Misc
-        private static bool miscUseE;
-
-        //Drawings
-        private static bool drawRangeM1;
-        private static bool drawRangeM2;
-        private static bool drawRangeSpace;
-        private static bool drawRangeE;
-        private static bool drawRangeR;
-        private static bool drawRangeF;
-
-        //Debug
-        private static bool debugProjSpeed;
-        private static float debugProjCheckInterval;
-        private static bool debugProjRange;
-        private static bool debugNewPrediction;
-        //TEMP MENU
+        private const bool JadeDebugMode = true;
 
         //THE SPEEDS ARE ROUGH ESTIMATES, NEED TO BE MORE ACCURATELY ACQUIRED
         private const float M1ProjSpeed = 17f;
@@ -79,101 +43,55 @@ namespace PipJade
 
         //HELPERS
         private static Projectile myLastProj = null;
-        private static int myLastProjAnalyseTimes = 0;
-        private static Vector2 myLastProjPos1 = Vector2.Zero;
-        private static Vector2 myLastProjPos2 = Vector2.Zero;
-        private static int myLastProjLastExamineT = 0;
-        private static int myLastProjLastExamineT2 = 0;
-        private static int myLastProjMeasureIntervalMs = 250;
 
         private static Vector2 myLastProjPreviousPos = Vector2.Zero;
-
-        private static bool JustFiredF = false;
-        private static bool JustFiredM2 = false;
-        private static bool JustFiredEX1 = false;
-
-        private static float JustFiredF_Time = 0;
-        private static float JustFiredM2_Time = 0;
-        private static float JustFiredEX1_Time = 0;
-
-        private const float JustFiredF_Casting = 0.6f;
-        private const float JustFiredF_Channeling = 1.5f;
-        private const float JustFiredM2_Casting = 1.6f;
-        private const float JustFiredEX1_Casting = 0.4f;
 
         private static AbilitySlot? lastAbilityFired = null;
 
         private static readonly CollisionFlags normalCollisions = CollisionFlags.NPCBlocker | CollisionFlags.Bush | CollisionFlags.InvisWalls;
-
-        private static List<MenuItem> children = new List<MenuItem>();
         //HELPERS
 
         public static void Init()
         {
             //LoadMenu();
             var _jadeMenu = MainMenu.AddMenu(new Menu("pipjademenu", "DaPipex's Jade"));
-            //Console.WriteLine("Added to lmao menu!");
 
             _jadeMenu.AddLabel("Basic Combo");
-            var mComboUseM1 = _jadeMenu.Add(new MenuCheckBox("combo.useM1", "Use Left-Mouse (Revolver Shot)", true));
-            var mComboUseM2 = _jadeMenu.Add(new MenuCheckBox("combo.useM2", "Use Right-Mouse (Snipe)", true));
-            //var mComboUseSpace = _jadeMenu.Add(new MenuCheckBox("combo.useSpace", "Use Space (Blast Vault)", false));
-            var mComboUseR = _jadeMenu.Add(new MenuCheckBox("combo.useR", "Use R (Junk Shot)", true));
-            var mComboUseEX1 = _jadeMenu.Add(new MenuCheckBox("combo.useEX1", "Use EX1 (Snap Shot)", true));
-            var mComboUseF = _jadeMenu.Add(new MenuCheckBox("combo.useF", "Use F (Explosive Shells)", true));
-            var mComboUseNewPred = _jadeMenu.Add(new MenuCheckBox("combo.useNewPred", "Use new prediction (EXPERIMENTAL)", false));
+            _jadeMenu.Add(new MenuCheckBox("combo.useM1", "Use Left-Mouse (Revolver Shot)", true));
+            _jadeMenu.Add(new MenuCheckBox("combo.useM2", "Use Right-Mouse (Snipe)", true));
+            _jadeMenu.Add(new MenuCheckBox("combo.useR", "Use R (Junk Shot)", true));
+            _jadeMenu.Add(new MenuCheckBox("combo.useEX1", "Use EX1 (Snap Shot)", true));
+            _jadeMenu.Add(new MenuCheckBox("combo.useF", "Use F (Explosive Shells)", true));
+            _jadeMenu.Add(new MenuCheckBox("combo.useNewPred", "Use new prediction (EXPERIMENTAL)", false));
 
             _jadeMenu.AddSeparator(10f);
 
             _jadeMenu.AddLabel("Misc");
-            var mMiscUseE = _jadeMenu.Add(new MenuCheckBox("misc.useE", "Use E (Disabling Shot) to interrupt", true));
+            _jadeMenu.Add(new MenuCheckBox("misc.useE", "Use E (Disabling Shot) to interrupt", true));
 
             _jadeMenu.AddSeparator(10f);
 
             _jadeMenu.AddLabel("Drawings");
-            var mDrawRangeM1 = _jadeMenu.Add(new MenuCheckBox("draw.rangeM1", "Draw Left-Mouse range (Revolver Shot)", false)); //true
-            var mDrawRangeM2 = _jadeMenu.Add(new MenuCheckBox("draw.rangeM2", "Draw Right-Mouse range (Snipe)", true));
-            //var mDrawRangeSpace = _jadeMenu.Add(new MenuCheckBox("draw.rangeSpace", "Draw Space Range (Blast vault)", false));
-            var mDrawRangeE = _jadeMenu.Add(new MenuCheckBox("draw.rangeE", "Draw E range (Disabling Shot)", true));
-            var mDrawRangeR = _jadeMenu.Add(new MenuCheckBox("draw.rangeR", "Draw R range (Junk Shot)", false));
-            var mDrawRangeF = _jadeMenu.Add(new MenuCheckBox("draw.rangeF", "Draw F range (Explosive Shells)", false));
+            _jadeMenu.Add(new MenuCheckBox("draw.rangeM1", "Draw Left-Mouse range (Revolver Shot)", false)); //true
+            _jadeMenu.Add(new MenuCheckBox("draw.rangeM2", "Draw Right-Mouse range (Snipe)", true));
+            _jadeMenu.Add(new MenuCheckBox("draw.rangeE", "Draw E range (Disabling Shot)", true));
+            _jadeMenu.Add(new MenuCheckBox("draw.rangeR", "Draw R range (Junk Shot)", false));
+            _jadeMenu.Add(new MenuCheckBox("draw.rangeF", "Draw F range (Explosive Shells)", false));
 
-            _jadeMenu.AddSeparator(10f);
+            if (JadeDebugMode)
+            {
+                _jadeMenu.AddSeparator(10f);
 
-            _jadeMenu.AddLabel("Debug");
-            var mDebugProjSpeed = _jadeMenu.Add(new MenuCheckBox("debug.projSpeed", "My last projectile's speed", false));
-            var mDebugProjCheckInterval = _jadeMenu.Add(new MenuSlider("debug.projSpeedInterval", "^ Check interval", 200f, 250f, 60f));
-            var mDebugProjRange = _jadeMenu.Add(new MenuCheckBox("debug.projRange", "My last projectile's range", false));
-            var mDebugNewPrediction = _jadeMenu.Add(new MenuCheckBox("debug.newPrediction", "Enemies Prediction", false));
-            _jadeMenu.Add(new MenuCheckBox("debug.Test", "Menu test", false));
-
-            //Console.WriteLine("Menu loaded!");
+                _jadeMenu.AddLabel("Debug");
+                _jadeMenu.Add(new MenuCheckBox("debug.projSpeed", "My last projectile's speed", false));
+                _jadeMenu.Add(new MenuCheckBox("debug.newPrediction", "Enemies Movement Prediction", false));
+            }
 
             CustomEvents.Instance.OnMatchStart += OnMatchStart;
+            CustomEvents.Instance.OnMatchEnd += OnMatchEnd;
             CustomEvents.Instance.OnDraw += OnDraw;
             CustomEvents.Instance.OnUpdate += delegate
             {
-                comboUseM1 = mComboUseM1.CurrentValue;
-                comboUseM2 = mComboUseM2.CurrentValue;
-                //comboUseSpace = mComboUseSpace.CurrentValue;
-                comboUseR = mComboUseR.CurrentValue;
-                comboUseEX1 = mComboUseEX1.CurrentValue;
-                comboUseF = mComboUseF.CurrentValue;
-                comboUseNewPred = mComboUseNewPred.CurrentValue;
-
-                miscUseE = mMiscUseE.CurrentValue;
-
-                drawRangeM1 = mDrawRangeM1.CurrentValue;
-                drawRangeM2 = mDrawRangeM2.CurrentValue;
-                //drawRangeSpace = mDrawRangeSpace.CurrentValue;
-                drawRangeE = mDrawRangeE.CurrentValue;
-                drawRangeR = mDrawRangeR.CurrentValue;
-                drawRangeF = mDrawRangeF.CurrentValue;
-
-                debugProjSpeed = mDebugProjSpeed.CurrentValue;
-                debugProjCheckInterval = mDebugProjCheckInterval.CurrentValue;
-                debugNewPrediction = mDebugNewPrediction.CurrentValue;
-
                 JadeHero = EntitiesManager.LocalPlayer;
                 JadeMenu = _jadeMenu;
 
@@ -183,107 +101,20 @@ namespace PipJade
 
         private static void OnMatchStart(EventArgs e)
         {
-            JadeHero = EntitiesManager.LocalPlayer;
 
-            if (JadeHero.CharName != HeroCharName)
-            {
-                return;
-            }
+        }
+
+        private static void OnMatchEnd(EventArgs e)
+        {
+
         }
 
         private static void OnUpdate()
         {
-            //if (JadeMenu == null)
-            //{
-            //    Console.WriteLine("JadeMenu is null");
-            //}
-            //else if (JadeMenu.Get<MenuCheckBox>("debug.Test").CurrentValue)
-            //{
-            //    Console.WriteLine("debug.Test is on!");
-            //}
-            //else
-            //{
-            //    Console.WriteLine("debug.Test is off!");
-            //}
-
-            if (!Game.IsInGame /*|| JadeHero.IsDead*/)
+            if (!Game.IsInGame)
             {
                 return;
             }
-
-            if (UnityEngine.Input.GetKeyDown(UnityEngine.KeyCode.Keypad5))
-            {
-                Console.WriteLine(LocalPlayer.AbilitesData.Count);
-                for (int i = 0; i < LocalPlayer.AbilitesData.Count; i++)
-                {
-                    var abilityData = LocalPlayer.AbilitesData[i];
-
-                    Console.WriteLine(String.Format("Index: {0}", i));
-                    Console.WriteLine(String.Format("Slot: {0}", abilityData.Slot));
-                    Console.WriteLine(String.Format("SlotIndex: {0}", abilityData.SlotIndex));
-                    Console.WriteLine(String.Format("Name: {0}", abilityData.IconName));
-                    //Console.WriteLine(String.Format("Cooldown Time: {0}", abilityData.CooldownTime));
-                    Console.WriteLine(String.Empty);
-                }
-            }
-
-            //if (UnityEngine.Input.GetKeyDown(UnityEngine.KeyCode.Keypad8))
-            //{
-            //    if (JadeMenu.Children.Any())
-            //    {
-            //        foreach (var child in JadeMenu.Children)
-            //        {
-            //            Console.WriteLine(child.Name);
-            //            Console.WriteLine(child.DisplayName);
-            //            Console.WriteLine(String.Empty);
-            //        }
-            //    }
-            //}
-
-            //Mouse1Ability = LocalPlayer.GetAbilityData(AbilitySlot.Ability1);
-            //Mouse2Ability = LocalPlayer.GetAbilityData(AbilitySlot.Ability2);
-            //SpaceAbility = LocalPlayer.GetAbilityData(AbilitySlot.Ability3);
-            //EAbility = LocalPlayer.GetAbilityData(AbilitySlot.Ability5);
-            //RAbility = LocalPlayer.GetAbilityData(AbilitySlot.EnergyAbility);
-            //EX1Ability = LocalPlayer.GetAbilityData(AbilitySlot.EXAbility1);
-            //FAbility = LocalPlayer.GetAbilityData(AbilitySlot.UltimateAbility);
-
-            if (UnityEngine.Input.GetKeyDown(UnityEngine.KeyCode.LeftControl))
-            {
-                var allProjectiles = EntitiesManager.ActiveProjectiles.Where(x => x.TeamId == JadeHero.TeamId);
-
-                if (allProjectiles.Any())
-                {
-                    foreach (var proj in allProjectiles)
-                    {
-                        Console.WriteLine(String.Format("Projectile: {0}", proj.ObjectName));
-                        Console.WriteLine(String.Format("Generation: {0} - Index: {1}", proj.Generation, proj.Index));
-                        Console.WriteLine(String.Format("Range: {0}", proj.Range));
-                        Console.WriteLine(String.Empty);
-                    }
-                }
-            }
-
-            if (debugProjSpeed)
-            {
-                myLastProj = EntitiesManager.ActiveProjectiles.Where(x => x.TeamId == JadeHero.TeamId).Last();
-
-                if (myLastProj != null)
-                {
-                    var distance = Vector2.Distance(myLastProj.WorldPosition, myLastProjPreviousPos);
-                    var time = UnityEngine.Time.deltaTime;
-                    var speed = distance / time;
-
-                    Console.WriteLine(String.Format("Projectile of name {0} has speed {1}", myLastProj.ObjectName, speed));
-
-                    myLastProjPreviousPos = myLastProj.WorldPosition;
-                }
-                else
-                {
-                    myLastProjPreviousPos = Vector2.Zero;
-                }
-            }
-
             
             if (UnityEngine.Input.GetKey(UnityEngine.KeyCode.Mouse3))
             {
@@ -298,32 +129,9 @@ namespace PipJade
                 ComboMode();
             }
 
-            //UpdateAbilitiesStates();
-        }
-
-        private static void UpdateAbilitiesStates()
-        {
-            //AbilityHudData M1AbilityHud = LocalPlayer.GetAbilityHudData(AbilitySlot.Ability1);
-            AbilityHudData M2AbilityHud = LocalPlayer.GetAbilityHudData(AbilitySlot.Ability2);
-            //AbilityHudData SpaceAbilityHud = LocalPlayer.GetAbilityHudData(AbilitySlot.Ability3);
-            //AbilityHudData EAbilityHud = LocalPlayer.GetAbilityHudData(AbilitySlot.Ability5);
-            //AbilityHudData RAbilityHud = LocalPlayer.GetAbilityHudData(AbilitySlot.EnergyAbility);
-            AbilityHudData EX1AbilityHud = LocalPlayer.GetAbilityHudData(AbilitySlot.EXAbility1);
-            AbilityHudData FAbilityHud = LocalPlayer.GetAbilityHudData(AbilitySlot.UltimateAbility);
-
-            if (FAbilityHud.CooldownTime == 0 || UnityEngine.Time.time > JustFiredF_Time + JustFiredF_Casting + JustFiredF_Channeling)
+            if (JadeDebugMode)
             {
-                JustFiredF = false;
-            }
-
-            if (M2AbilityHud.CooldownTime == 0 || UnityEngine.Time.time > JustFiredM2_Time + JustFiredM2_Casting)
-            {
-                JustFiredM2 = false;
-            }
-
-            if (EX1AbilityHud.CooldownTime == 0 || UnityEngine.Time.time > JustFiredEX1_Time + JustFiredEX1_Casting)
-            {
-                JustFiredEX1 = false;
+                DebugStuff();
             }
         }
 
@@ -334,9 +142,10 @@ namespace PipJade
             Player targetR = TargetSelector.GetTarget(TargetingMode.LowestHealth, RProjRange);
             Player targetE = null;
 
+            bool useNewPred = JadeMenu.GetBoolean("combo.useNewPred");
             bool castingSomething = JadeHero.IsCasting || JadeHero.IsChanneling;
 
-            if ((miscUseE && MyUtils.CanCastAbility(AbilitySlot.Ability5)) || (castingSomething && lastAbilityFired == AbilitySlot.Ability5))
+            if ((JadeMenu.GetBoolean("misc.useE") && MyUtils.CanCastAbility(AbilitySlot.Ability5)) || (castingSomething && lastAbilityFired == AbilitySlot.Ability5))
             {
                 if (targetE == null)
                 {
@@ -355,7 +164,7 @@ namespace PipJade
 
                 if (targetE != null)
                 {
-                    if (!comboUseNewPred)
+                    if (!useNewPred)
                     {
                         var pred = Prediction.GetPrediction(JadeHero, targetE, EProjSpeed, EProjRange, 0f, SkillType.Line, 0, normalCollisions);
 
@@ -393,7 +202,7 @@ namespace PipJade
                     case AbilitySlot.UltimateAbility:
                         if (targetM2_F != null)
                         {
-                            if (!comboUseNewPred)
+                            if (!useNewPred)
                             {
                                 var pred = Prediction.GetPrediction(JadeHero, targetM2_F, FProjSpeed, FProjRange, 0f, SkillType.Line, 0, normalCollisions);
 
@@ -418,7 +227,7 @@ namespace PipJade
                     case AbilitySlot.EnergyAbility:
                         if (targetR != null)
                         {
-                            if (!comboUseNewPred)
+                            if (!useNewPred)
                             {
                                 var pred = Prediction.GetPrediction(JadeHero, targetR, RProjSpeed, RProjRange, 0f, SkillType.Line, 0, normalCollisions);
 
@@ -443,7 +252,7 @@ namespace PipJade
                     case AbilitySlot.Ability2:
                         if (targetM2_F != null)
                         {
-                            if (!comboUseNewPred)
+                            if (!useNewPred)
                             {
                                 var pred = Prediction.GetPrediction(JadeHero, targetM2_F, M2ProjSpeed, M2ProjRange, 0f, SkillType.Line, 0, normalCollisions);
 
@@ -468,7 +277,7 @@ namespace PipJade
                     case AbilitySlot.EXAbility1:
                         if (targetM2_F != null)
                         {
-                            if (!comboUseNewPred)
+                            if (!useNewPred)
                             {
                                 var pred = Prediction.GetPrediction(JadeHero, targetM2_F, M2ProjSpeed, M2ProjRange, 0f, SkillType.Line, 0, normalCollisions);
 
@@ -496,10 +305,10 @@ namespace PipJade
             {
                 lastAbilityFired = null;
             }
-            //if (((comboUseF && MyUtils.CanCastAbility(AbilitySlot.UltimateAbility)) || ((JadeHero.IsCasting || JadeHero.IsChanneling) && JustFiredF)) && targetM2_F != null)
-            if (comboUseF && MyUtils.CanCastAbility(AbilitySlot.UltimateAbility) && lastAbilityFired == null && targetM2_F != null)
+
+            if (JadeMenu.GetBoolean("combo.useF") && MyUtils.CanCastAbility(AbilitySlot.UltimateAbility) && lastAbilityFired == null && targetM2_F != null)
             {
-                if (!comboUseNewPred)
+                if (!useNewPred)
                 {
                     var pred = Prediction.GetPrediction(JadeHero, targetM2_F, FProjSpeed, FProjRange, 0f, SkillType.Line, 0, normalCollisions);
 
@@ -524,10 +333,10 @@ namespace PipJade
                     }
                 }
             }
-            //else if (comboUseR && MyUtils.CanCastAbility(AbilitySlot.EnergyAbility) && JadeHero.Energy >= 50f && targetR != null)
-            if (comboUseR && MyUtils.CanCastAbility(AbilitySlot.EnergyAbility) && JadeHero.Energy >= 50f && lastAbilityFired == null && targetR != null)
+            
+            if (JadeMenu.GetBoolean("combo.useR") && MyUtils.CanCastAbility(AbilitySlot.EnergyAbility) && JadeHero.Energy >= 50f && lastAbilityFired == null && targetR != null)
             {
-                if (!comboUseNewPred)
+                if (!useNewPred)
                 {
                     var pred = Prediction.GetPrediction(JadeHero, targetR, RProjSpeed, RProjRange, 0f, SkillType.Line, 0, normalCollisions);
 
@@ -552,10 +361,10 @@ namespace PipJade
                     }
                 }
             }
-            //else if (((comboUseM2 && MyUtils.CanCastAbility(AbilitySlot.Ability2) && JadeHero.EnemiesAround(5f) == 0) || (JadeHero.IsCasting && JustFiredM2)) && targetM2_F != null)
-            if (comboUseM2 && MyUtils.CanCastAbility(AbilitySlot.Ability2) && JadeHero.EnemiesAround(6.5f) == 0 && lastAbilityFired == null && targetM2_F != null)
+
+            if (JadeMenu.GetBoolean("combo.useM2") && MyUtils.CanCastAbility(AbilitySlot.Ability2) && JadeHero.EnemiesAround(6.5f) == 0 && lastAbilityFired == null && targetM2_F != null)
             {
-                if (!comboUseNewPred)
+                if (!useNewPred)
                 {
                     var pred = Prediction.GetPrediction(JadeHero, targetM2_F, M2ProjSpeed, M2ProjRange, 0f, SkillType.Line, 0, normalCollisions);
 
@@ -580,10 +389,10 @@ namespace PipJade
                     }
                 }
             }
-            //else if (((comboUseEX1 && MyUtils.CanCastAbility(AbilitySlot.EXAbility1) && JadeHero.Energy >= 50f) || (JadeHero.IsCasting && JustFiredEX1)) && targetM2_F != null)
-            if (comboUseEX1 && MyUtils.CanCastAbility(AbilitySlot.Ability2) && JadeHero.Energy >= 50f && lastAbilityFired == null && targetM2_F != null)
+
+            if (JadeMenu.GetBoolean("combo.useEX1") && MyUtils.CanCastAbility(AbilitySlot.Ability2) && JadeHero.Energy >= 50f && lastAbilityFired == null && targetM2_F != null)
             {
-                if (!comboUseNewPred)
+                if (!useNewPred)
                 {
                     var pred = Prediction.GetPrediction(JadeHero, targetM2_F, M2ProjSpeed, M2ProjRange, 0f, SkillType.Line, 0, normalCollisions);
 
@@ -608,10 +417,10 @@ namespace PipJade
                     }
                 }
             }
-            /*else*/
-            if (comboUseM1 && lastAbilityFired == null && targetM1 != null)
+
+            if (JadeMenu.GetBoolean("combo.useM1") && lastAbilityFired == null && targetM1 != null)
             {
-                if (!comboUseNewPred)
+                if (!useNewPred)
                 {
                     var pred = Prediction.GetPrediction(JadeHero, targetM1, M1ProjSpeed, M1ProjRange, 0f, SkillType.Line, 0, normalCollisions);
 
@@ -671,7 +480,7 @@ namespace PipJade
                 }
                 else
                 {
-                    if (orb.Health <= 6 * 4 || orb.Health >= 6 * 4 * 2)
+                    if (orb.Health <= 6 * 4 || orb.Health >= 6 * 4 + (6 * 4 / 2))
                     {
                         LocalPlayer.CastAbility(AbilitySlot.Ability1, 10);
                     }
@@ -686,56 +495,54 @@ namespace PipJade
                 return;
             }
 
-            if (myLastProj != null)
-            {
-                Drawing.DrawCircle(myLastProj.WorldPosition, 5f, UnityEngine.Color.green);
-            }
-
-            if (drawRangeM1)
+            if (JadeMenu.GetBoolean("draw.rangeM1"))
             {
                 Drawing.DrawCircle(JadeHero.WorldPosition, M1ProjRange /*+ JadeHero.SpellCollisionRadius*/, UnityEngine.Color.red);
             }
 
-            if (drawRangeM2)
+            if (JadeMenu.GetBoolean("draw.rangeM2"))
             {
                 Drawing.DrawCircle(JadeHero.WorldPosition, M2ProjRange /*+ JadeHero.SpellCollisionRadius*/, UnityEngine.Color.red);
             }
 
-            if (drawRangeSpace)
-            {
-                Drawing.DrawCircle(JadeHero.WorldPosition, SpaceRange /*+ JadeHero.SpellCollisionRadius*/, UnityEngine.Color.red);
-            }
-
-            if (drawRangeE)
+            if (JadeMenu.GetBoolean("draw.rangeE"))
             {
                 Drawing.DrawCircle(JadeHero.WorldPosition, EProjRange /*+ JadeHero.SpellCollisionRadius*/, UnityEngine.Color.red);
             }
 
-            if (drawRangeR)
+            if (JadeMenu.GetBoolean("draw.rangeR"))
             {
                 Drawing.DrawCircle(JadeHero.WorldPosition, RProjRange /*+ JadeHero.SpellCollisionRadius*/, UnityEngine.Color.red);
             }
 
-            if (drawRangeF)
+            if (JadeMenu.GetBoolean("draw.rangeF"))
             {
                 Drawing.DrawCircle(JadeHero.WorldPosition, FProjRange /*+ JadeHero.SpellCollisionRadius*/, UnityEngine.Color.magenta);
             }
 
-            if (debugNewPrediction)
+            if (JadeDebugMode)
             {
-                if (EntitiesManager.EnemyTeam.Any())
+                if (JadeMenu.GetBoolean("debug.newPrediction"))
                 {
-                    foreach (var enemy in EntitiesManager.EnemyTeam)
+                    if (EntitiesManager.EnemyTeam.Any())
                     {
-                        if (enemy.IsValid && !enemy.IsImmaterial && !enemy.IsDead)
+                        foreach (var enemy in EntitiesManager.EnemyTeam)
                         {
-                            var pred = NewPrediction.Prediction.GetPrediction(
-                                new NewPrediction.PredictionInput(
-                                    JadeHero.WorldPosition, enemy, M1ProjSpeed, M1ProjRange, 0f, 0f), true);
+                            if (enemy.IsValid && !enemy.IsImmaterial && !enemy.IsDead)
+                            {
+                                var pred = NewPrediction.Prediction.GetPrediction(
+                                    new NewPrediction.PredictionInput(
+                                        JadeHero.WorldPosition, enemy, M1ProjSpeed, M1ProjRange, 0f, 0f), true);
 
-                            Drawing.DrawCircle(pred.TargetPosition, 1f, UnityEngine.Color.cyan);
+                                Drawing.DrawCircle(pred.TargetPosition, 1f, UnityEngine.Color.cyan);
+                            }
                         }
                     }
+                }
+
+                if (myLastProj != null)
+                {
+                    Drawing.DrawCircle(myLastProj.WorldPosition, 5f, UnityEngine.Color.green);
                 }
             }
         }
@@ -743,6 +550,61 @@ namespace PipJade
         private static void LoadMenu()
         {
 
+        }
+
+        private static void DebugStuff()
+        {
+            if (UnityEngine.Input.GetKeyDown(UnityEngine.KeyCode.Keypad5))
+            {
+                Console.WriteLine(LocalPlayer.AbilitesData.Count);
+                for (int i = 0; i < LocalPlayer.AbilitesData.Count; i++)
+                {
+                    var abilityData = LocalPlayer.AbilitesData[i];
+
+                    Console.WriteLine(String.Format("Index: {0}", i));
+                    Console.WriteLine(String.Format("Slot: {0}", abilityData.Slot));
+                    Console.WriteLine(String.Format("SlotIndex: {0}", abilityData.SlotIndex));
+                    Console.WriteLine(String.Format("Name: {0}", abilityData.IconName));
+                    //Console.WriteLine(String.Format("Cooldown Time: {0}", abilityData.CooldownTime));
+                    Console.WriteLine(String.Empty);
+                }
+            }
+
+            if (UnityEngine.Input.GetKeyDown(UnityEngine.KeyCode.Keypad8))
+            {
+                var allProjectiles = EntitiesManager.ActiveProjectiles.Where(x => x.TeamId == JadeHero.TeamId);
+
+                if (allProjectiles.Any())
+                {
+                    foreach (var proj in allProjectiles)
+                    {
+                        Console.WriteLine(String.Format("Projectile: {0}", proj.ObjectName));
+                        Console.WriteLine(String.Format("Generation: {0} - Index: {1}", proj.Generation, proj.Index));
+                        Console.WriteLine(String.Format("Range: {0}", proj.Range));
+                        Console.WriteLine(String.Empty);
+                    }
+                }
+            }
+
+            if (JadeMenu.GetBoolean("debug.projSpeed"))
+            {
+                myLastProj = EntitiesManager.ActiveProjectiles.Where(x => x.TeamId == JadeHero.TeamId).Last();
+
+                if (myLastProj != null)
+                {
+                    var distance = Vector2.Distance(myLastProj.WorldPosition, myLastProjPreviousPos);
+                    var time = UnityEngine.Time.deltaTime;
+                    var speed = distance / time;
+
+                    Console.WriteLine(String.Format("Projectile of name {0} has speed {1}", myLastProj.ObjectName, speed));
+
+                    myLastProjPreviousPos = myLastProj.WorldPosition;
+                }
+                else
+                {
+                    myLastProjPreviousPos = Vector2.Zero;
+                }
+            }
         }
     }
 }
