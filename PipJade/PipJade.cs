@@ -115,16 +115,17 @@ namespace PipJade
             {
                 return;
             }
-            
+
+            if (JadeHero.CharName != "Gunner")
+            {
+                return;
+            }
+
             if (UnityEngine.Input.GetKey(UnityEngine.KeyCode.Mouse3))
             {
                 OrbStealerMode();
             }
             else if (UnityEngine.Input.GetKey(UnityEngine.KeyCode.LeftControl))
-            {
-                //Free aim
-            }
-            else
             {
                 ComboMode();
             }
@@ -490,7 +491,12 @@ namespace PipJade
 
         private static void OnDraw(EventArgs e)
         {
-            if (!Game.IsInGame /*|| JadeHero.IsDead*/)
+            if (!Game.IsInGame)
+            {
+                return;
+            }
+
+            if (JadeHero.CharName != "Gunner")
             {
                 return;
             }
