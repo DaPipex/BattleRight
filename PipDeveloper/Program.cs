@@ -36,7 +36,7 @@ namespace PipDeveloper
             var _devMenu = new Menu("pipdevelopermenu", "DaPipex's Developer Helper");
 
             _devMenu.AddLabel("Projectiles");
-            _devMenu.Add(new MenuCheckBox("proj.name", "Last Projectile Name", true));
+            _devMenu.Add(new MenuCheckBox("proj.name", "Last Projectile Name", false));
             _devMenu.Add(new MenuCheckBox("proj.range", "Last Projectile Range", false));
             _devMenu.Add(new MenuCheckBox("proj.radius", "Last Projectile Radius", false));
             _devMenu.Add(new MenuCheckBox("proj.speed", "Last Projectile Speed", false));
@@ -60,8 +60,20 @@ namespace PipDeveloper
             _devMenu.Add(new MenuCheckBox("draw.customCircle.increase", "    ^ Increase by 0.1", false));
             _devMenu.Add(new MenuCheckBox("draw.customCircle.decrease", "    ^ Decrease by 0.1", false));
 
+            _devMenu.AddSeparator(10f);
+
+            _devMenu.AddLabel("Special Debug");
+            _devMenu.Add(new MenuCheckBox("debug.stw", "Screen to World Test", false));
+            _devMenu.Add(new MenuSlider("debug.stw.xSlider", "X", 960f, 1920f, 0f));
+            _devMenu.Add(new MenuSlider("debug.stw.ySlider", "Y", 540f, 1080f, 0f));
+            //_devMenu.Add(new MenuCheckBox("debug.stw.cameraInfo", "Print camera info", false));
+            _devMenu.Add(new MenuCheckBox("debug.stw.ray.useSliders", "Use X and Y Sliders instead of mouse pos", false));
+            _devMenu.Add(new MenuKeybind("debug.keybind", "Keybind Test", UnityEngine.KeyCode.T, false, false));
+            _devMenu.Add(new MenuKeybind("debug.keybind.toggle", "Toggle Keybind Test", UnityEngine.KeyCode.G, false, true));
+
             MainMenu.AddMenu(_devMenu);
 
+            CustomEvents.Instance.OnMatchStart += OnMatchStart;
             CustomEvents.Instance.OnUpdate += delegate
             {
                 DevMenu = _devMenu;
@@ -74,6 +86,11 @@ namespace PipDeveloper
             CustomEvents.Instance.OnDraw += OnDraw;
         }
 
+        private static void OnMatchStart(EventArgs args)
+        {
+
+        }
+
         private static void OnUpdate()
         {
             if (!Game.IsInGame)
@@ -83,6 +100,7 @@ namespace PipDeveloper
 
             ProjectileDebug();
             MiscDebug();
+            SpecialDebug();
         }
 
         private static void ProjectileDebug()
@@ -207,6 +225,22 @@ namespace PipDeveloper
             }
         }
 
+        private static void SpecialDebug()
+        {
+            //if (DevMenu.GetBoolean("debug.stw.cameraInfo"))
+            //{
+            //    UnityEngine.Camera cam = UnityEngine.Camera.main;
+
+            //    Console.WriteLine("Position: " + cam.transform.position.ToString());
+            //    Console.WriteLine("Rotation: " + cam.transform.rotation.ToString());
+            //    Console.WriteLine("Is orthographic: " + cam.orthographic);
+            //    Console.WriteLine("Name: " + cam.name);
+            //    Console.WriteLine(string.Empty);
+
+            //    DevMenu.SetBoolean("debug.stw.cameraInfo", false);
+            //}
+        }
+
         private static void OnDraw(EventArgs args)
         {
             if (!Game.IsInGame)
@@ -230,6 +264,38 @@ namespace PipDeveloper
             {
                 var range = DevMenu.GetSlider("draw.customCircle.range");
                 Drawing.DrawCircle(EntitiesManager.LocalPlayer.WorldPosition, range, UnityEngine.Color.green);
+            }
+
+            if (DevMenu.GetBoolean("debug.stw"))
+            {
+                UnityEngine.Camera cam = UnityEngine.Camera.main;
+
+                var sliderX = DevMenu.GetSlider("debug.stw.xSlider");
+                var sliderY = DevMenu.GetSlider("debug.stw.ySlider");
+
+                var useSliders = DevMenu.GetBoolean("debug.stw.ray.useSliders");
+                UnityEngine.Ray ray = cam.ScreenPointToRay(useSliders ? new UnityEngine.Vector3(sliderX, sliderY) : UnityEngine.Input.mousePosition);
+                UnityEngine.Plane plane = new UnityEngine.Plane(UnityEngine.Vector3.up, UnityEngine.Vector3.zero);
+
+                float d;
+
+                if (plane.Raycast(ray, out d))
+                {
+                    var drawPos = new Vector2(ray.GetPoint(d).x, ray.GetPoint(d).z);
+
+                    Drawing.DrawCircle(drawPos, 2.5f, UnityEngine.Color.red);
+                    Drawing.DrawString(drawPos, "C", UnityEngine.Color.cyan);
+                }
+            }
+
+            if (DevMenu.Get<MenuKeybind>("debug.keybind").CurrentValue)
+            {
+                Drawing.DrawCircle(DevHero.WorldPosition, 2f, UnityEngine.Color.yellow);
+            }
+
+            if (DevMenu.Get<MenuKeybind>("debug.keybind.toggle").CurrentValue)
+            {
+                Drawing.DrawCircle(DevHero.WorldPosition, 3f, UnityEngine.Color.magenta);
             }
         }
     }

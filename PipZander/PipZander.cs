@@ -56,6 +56,8 @@ namespace PipZander
 
         private static AbilitySlot? LastAbilityFired = null;
         private static bool IsQRecast = false;
+        private static Player InterruptTargetE = null;
+
 
         public static void Init()
         {
@@ -83,8 +85,14 @@ namespace PipZander
             _zanderMenu.AddSeparator(10f);
 
             _zanderMenu.AddLabel("Drawings");
-            _zanderMenu.Add(new MenuCheckBox("draw.clones", "Draw circle around clones", true));
-            _zanderMenu.Add(new MenuCheckBox("draw.portalRecastTime", "Portal recast time", false));
+            _zanderMenu.Add(new MenuCheckBox("draw.rangeM1", "Draw Zander M1 range", true));
+            _zanderMenu.Add(new MenuCheckBox("draw.rangeM2", "Draw Zander M2 range", true));
+            _zanderMenu.Add(new MenuCheckBox("draw.clones", "Draw circles around clones", true));
+            _zanderMenu.Add(new MenuCheckBox("draw.clones.rangeM1", "Draw M1 range around clones", false));
+            _zanderMenu.Add(new MenuCheckBox("draw.clones.rangeM2", "Draw M2 range around ulti clone", false));
+            _zanderMenu.Add(new MenuCheckBox("draw.mouseLocation", "Draw mouse location for better awareness", true));
+            _zanderMenu.Add(new MenuCheckBox("draw.cooldowns.skillSpace", "Draw space cooldown on screen", false));
+            _zanderMenu.Add(new MenuCheckBox("draw.cooldowns.skillQ", "Draw Q cooldown on screen", false));
 
             MainMenu.AddMenu(_zanderMenu);
 
@@ -143,9 +151,9 @@ namespace PipZander
         {
             var activeGOs = EntitiesManager.ActiveGameObjects;
 
-            SpaceClone = activeGOs.Find(x => x.ObjectName.Equals(SpaceCloneName));
-            EX2Clone = activeGOs.Find(x => x.ObjectName.Equals(EX2CloneName));
-            UltiClone = activeGOs.Find(x => x.ObjectName.Equals(UltiCloneName));
+            SpaceClone = activeGOs.Find(x => x.ObjectName.Equals(SpaceCloneName) && x.TeamId == ZanderHero.TeamId);
+            EX2Clone = activeGOs.Find(x => x.ObjectName.Equals(EX2CloneName) && x.TeamId == ZanderHero.TeamId);
+            UltiClone = activeGOs.Find(x => x.ObjectName.Equals(UltiCloneName) && x.TeamId == ZanderHero.TeamId);
         }
 
         private static void HealOthers()
@@ -415,7 +423,6 @@ namespace PipZander
 
         private static void InterruptCombo()
         {
-            Player InterruptTargetE = null;
             bool IsCastingOrChanneling = ZanderHero.IsCasting || ZanderHero.IsChanneling;
 
             if (EntitiesManager.EnemyTeam.Any())
@@ -454,6 +461,7 @@ namespace PipZander
             else
             {
                 LastAbilityFired = null;
+                InterruptTargetE = null;
             }
         }
 
@@ -467,6 +475,16 @@ namespace PipZander
             if (ZanderHero.CharName != Champion.Zander.ToString())
             {
                 return;
+            }
+
+            if (ZanderMenu.GetBoolean("draw.rangeM1"))
+            {
+                Drawing.DrawCircle(ZanderHero.WorldPosition, M1Range, UnityEngine.Color.yellow);
+            }
+
+            if (ZanderMenu.GetBoolean("draw.rangeM2"))
+            {
+                Drawing.DrawCircle(ZanderHero.WorldPosition, M2Range, UnityEngine.Color.red);
             }
 
             if (ZanderMenu.GetBoolean("draw.clones"))
@@ -487,13 +505,56 @@ namespace PipZander
                 }
             }
 
-            if (ZanderMenu.GetBoolean("draw.portalRecastTime"))
+            if (ZanderMenu.GetBoolean("draw.clones.rangeM1"))
             {
-                Buff portalBuff;
-                if (ZanderHero.HasBuff("PortalRecastBuff", out portalBuff))
+                if (SpaceClone != null)
                 {
-                    Drawing.DrawString(ZanderHero.WorldPosition, portalBuff.TimeToExpire.ToString(), UnityEngine.Color.green);
+                    Drawing.DrawCircle(SpaceClone.WorldPosition, M1Range, UnityEngine.Color.yellow);
                 }
+
+                if (EX2Clone != null)
+                {
+                    Drawing.DrawCircle(EX2Clone.WorldPosition, M1Range, UnityEngine.Color.yellow);
+                }
+
+                if (UltiClone != null)
+                {
+                    Drawing.DrawCircle(UltiClone.WorldPosition, M1Range, UnityEngine.Color.yellow);
+                }
+            }
+
+            if (ZanderMenu.GetBoolean("draw.clones.rangeM2"))
+            {
+                if (UltiClone != null)
+                {
+                    Drawing.DrawCircle(UltiClone.WorldPosition, M2Range, UnityEngine.Color.red);
+                }
+            }
+
+            if (ZanderMenu.GetBoolean("draw.mouseLocation"))
+            {
+                var toGameVector2 = new Vector2(UnityEngine.Input.mousePosition.x, UnityEngine.Input.mousePosition.y);
+                Drawing.DrawCircle(toGameVector2.ScreenToWorld(), 1.75f, UnityEngine.Color.green);
+            }
+
+            if (ZanderMenu.GetBoolean("draw.cooldowns.skillSpace"))
+            {
+                var drawPos = new Vector2(760f, 1080f - 350f);
+                var ability = LocalPlayer.GetAbilityHudData(AbilitySlot.Ability3);
+                var abilityReady = MiscUtils.CanCast(AbilitySlot.Ability3);
+                var textToDraw = "Space state: " + (abilityReady ? "Ready!" : Math.Round(ability.CooldownTime, 2).ToString());
+
+                Drawing.DrawString(drawPos.ScreenToWorld(), textToDraw, abilityReady ? UnityEngine.Color.green : UnityEngine.Color.red);
+            }
+
+            if (ZanderMenu.GetBoolean("draw.cooldowns.skillQ"))
+            {
+                var drawPos = new Vector2(1920f - 760f, 1080f - 350f);
+                var ability = LocalPlayer.GetAbilityHudData(AbilitySlot.Ability4);
+                var abilityReady = MiscUtils.CanCast(AbilitySlot.Ability4);
+                var textToDraw = "Q state: " + (abilityReady ? "Ready!" : Math.Round(ability.CooldownTime, 2).ToString());
+
+                Drawing.DrawString(drawPos.ScreenToWorld(), textToDraw, abilityReady ? UnityEngine.Color.green : UnityEngine.Color.red);
             }
         }
     }

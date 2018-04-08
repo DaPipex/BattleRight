@@ -48,5 +48,20 @@ namespace PipZander.Utils
         {
             return player.Buffs.Any(x => x.ObjectName.Equals(buffName));
         }
+
+        public static Vector2 ScreenToWorld(this Vector2 screenPos)
+        {
+            var cam = UnityEngine.Camera.main;
+            var ray = cam.ScreenPointToRay(new UnityEngine.Vector3(screenPos.X, screenPos.Y));
+            var plane = new UnityEngine.Plane(UnityEngine.Vector3.up, UnityEngine.Vector3.zero);
+
+            float d;
+            if (plane.Raycast(ray, out d))
+            {
+                return new Vector2(ray.GetPoint(d).x, ray.GetPoint(d).z);
+            }
+
+            return Vector2.Zero;
+        }
     }
 }
