@@ -9,7 +9,7 @@ namespace PipJade
     {
         static void Main(string[] args)
         {
-            PipJade.Init();
+            PipJade2.Init();
         }
     }
 }
