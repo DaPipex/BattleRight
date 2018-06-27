@@ -5,7 +5,7 @@
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProjectGuid>{60F0BCA5-2EFB-45F0-8C84-29A84BD623E6}</ProjectGuid>
-    <OutputType>Exe</OutputType>
+    <OutputType>Library</OutputType>
     <RootNamespace>PipDeveloper</RootNamespace>
     <AssemblyName>PipDeveloper</AssemblyName>
     <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
@@ -30,9 +30,19 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
+  <PropertyGroup>
+    <StartupObject />
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="BattleRight.Core">
       <HintPath>..\..\..\..\Downloads\BR\Release\System\BattleRight.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="BattleRight.Helper">
+      <HintPath>..\..\..\..\Downloads\BR\Release\System\BattleRight.Helper.dll</HintPath>
+    </Reference>
+    <Reference Include="BattleRight.Sandbox, Version=1.0.0.0, Culture=neutral, PublicKeyToken=17d7f475c70d8a09, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\..\Downloads\BR\Release\System\BattleRight.Sandbox.dll</HintPath>
     </Reference>
     <Reference Include="BattleRight.SDK">
       <HintPath>..\..\..\..\Downloads\BR\Release\System\BattleRight.SDK.dll</HintPath>

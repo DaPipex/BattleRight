@@ -9,7 +9,8 @@ using BattleRight.Core.Enumeration;
 using BattleRight.Core.GameObjects;
 using BattleRight.Core.Math;
 using BattleRight.Core.Models;
-
+using BattleRight.Helper;
+using BattleRight.Sandbox;
 using BattleRight.SDK;
 using BattleRight.SDK.Events;
 using BattleRight.SDK.UI;
@@ -20,9 +21,9 @@ using PipDeveloper.Extensions;
 
 namespace PipDeveloper
 {
-    class Program
+    class Program : IAddon
     {
-        private static Menu DevMenu = null;
+        private static Menu _devMenu;
         private static Player DevHero;
 
         private static Projectile LastProj = null;
@@ -31,9 +32,14 @@ namespace PipDeveloper
         private static Stopwatch ProjSpeedSW = new Stopwatch();
         private static float ProjSpeedDistance;
 
-        static void Main(string[] args)
+        public void OnUnload()
         {
-            var _devMenu = new Menu("pipdevelopermenu", "DaPipex's Developer Helper");
+
+        }
+
+        public void OnInit()
+        {
+            _devMenu = new Menu("pipdevelopermenu", "DaPipex's Developer Helper");
 
             _devMenu.AddLabel("Projectiles");
             _devMenu.Add(new MenuCheckBox("proj.name", "Last Projectile Name", false));
@@ -46,6 +52,13 @@ namespace PipDeveloper
             _devMenu.AddLabel("Misc");
             _devMenu.Add(new MenuCheckBox("misc.activeGOs", "Active GameObjects", false));
             _devMenu.Add(new MenuCheckBox("misc.activeGOs.distance", "    ^ Distance", false));
+            _devMenu.Add(new MenuCheckBox("misc.ingameGOs", "Ingame GameObjects", false));
+            //_devMenu.Add(new MenuCheckBox("misc.ingameGOs.distance", "    ^ Distance", false));
+            _devMenu.Add(new MenuCheckBox("misc.damageableGOs", "Damageable GameObjects", false));
+            _devMenu.Add(new MenuCheckBox("misc.damageableGOs.distance", "    ^ Distance", false));
+            _devMenu.Add(new MenuCheckBox("misc.dummyGOs", "Dummy GameObjects", false));
+            _devMenu.Add(new MenuCheckBox("misc.dummyGOs.distance", "    ^ Distance", false));
+            _devMenu.AddSeparator();
             _devMenu.Add(new MenuCheckBox("misc.mySpellRadius", "My Spell Radius", false));
             _devMenu.Add(new MenuCheckBox("misc.charName", "My charName", false));
             _devMenu.Add(new MenuCheckBox("misc.spellsNames", "My spells' names", false));
@@ -53,6 +66,10 @@ namespace PipDeveloper
             _devMenu.Add(new MenuCheckBox("misc.buffNames", "My buff names", false));
 
             _devMenu.AddSeparator(10f);
+
+            _devMenu.AddLabel("Object create/destroy");
+            _devMenu.Add(new MenuCheckBox("obj.create", "Print info of objects created", false));
+            _devMenu.Add(new MenuCheckBox("obj.destroy", "Print info of objects destroyed", false));
 
             _devMenu.AddLabel("Drawings");
             _devMenu.Add(new MenuCheckBox("draw.customCircle", "Draw custom circle", true));
@@ -73,17 +90,26 @@ namespace PipDeveloper
 
             MainMenu.AddMenu(_devMenu);
 
-            CustomEvents.Instance.OnMatchStart += OnMatchStart;
-            CustomEvents.Instance.OnUpdate += delegate
+            Game.OnUpdate += OnUpdate;
+            Game.OnDraw += OnDraw;
+            InGameObject.OnCreate += OnCreate;
+            InGameObject.OnDestroy += OnDestroy;
+        }
+
+        private static void OnCreate(InGameObject inGameObject)
+        {
+            if (_devMenu.GetBoolean("obj.create"))
             {
-                DevMenu = _devMenu;
+                Console.WriteLine(inGameObject.ObjectName + " of type " + inGameObject.GetType().ToString() + " created");
+            }
+        }
 
-                DevHero = EntitiesManager.LocalPlayer;
-
-                OnUpdate();
-            };
-
-            CustomEvents.Instance.OnDraw += OnDraw;
+        private static void OnDestroy(InGameObject inGameObject)
+        {
+            if (_devMenu.GetBoolean("obj.destroy"))
+            { 
+                Console.WriteLine(inGameObject.ObjectName + " of type " + inGameObject.GetType().ToString() + " destroyed");
+            }
         }
 
         private static void OnMatchStart(EventArgs args)
@@ -91,12 +117,14 @@ namespace PipDeveloper
 
         }
 
-        private static void OnUpdate()
+        private static void OnUpdate(EventArgs args)
         {
             if (!Game.IsInGame)
             {
                 return;
             }
+
+            DevHero = EntitiesManager.LocalPlayer;
 
             ProjectileDebug();
             MiscDebug();
@@ -109,26 +137,39 @@ namespace PipDeveloper
 
             if (EntitiesManager.ActiveProjectiles.Any())
             {
+                //Console.WriteLine("ActiveProjectile(s) found");
+                //Console.WriteLine("Last proj teamID: " + EntitiesManager.ActiveProjectiles.LastOrDefault().TeamId);
+                //Console.WriteLine("Hero teamID: " + DevHero.TeamId);
+
                 _lastProj = EntitiesManager.ActiveProjectiles.Where(x => x.TeamId == DevHero.TeamId).LastOrDefault();
+
+                //if (_lastProj == null)
+                //{
+                //    Console.WriteLine("No projectile found wtf");
+                //}
+                //else
+                //{
+                //    Console.WriteLine("Proj of name: " + _lastProj.ObjectName + " found");
+                //}
 
                 if (_lastProj != null && !_lastProj.IsSame(LastProj))
                 {
-                    if (DevMenu.GetBoolean("proj.name"))
+                    if (_devMenu.GetBoolean("proj.name"))
                     {
                         Console.WriteLine("Name: " + _lastProj.ObjectName);
                     }
 
-                    if (DevMenu.GetBoolean("proj.range"))
+                    if (_devMenu.GetBoolean("proj.range"))
                     {
                         Console.WriteLine("Range: " + _lastProj.Range);
                     }
 
-                    if (DevMenu.GetBoolean("proj.radius"))
+                    if (_devMenu.GetBoolean("proj.radius"))
                     {
-                        Console.WriteLine("Radius: " + _lastProj.SpellCollisionRadius);
+                        Console.WriteLine("Radius: " + _lastProj.Radius);
                     }
 
-                    if (DevMenu.GetBoolean("proj.speed"))
+                    if (_devMenu.GetBoolean("proj.speed"))
                     {
                         ProjSpeedSW.Reset();
                         ProjSpeedSW.Start();
@@ -154,13 +195,13 @@ namespace PipDeveloper
 
         private static void MiscDebug()
         {
-            if (DevMenu.GetBoolean("misc.activeGOs"))
+            if (_devMenu.GetBoolean("misc.activeGOs"))
             {
-                var aGOs = EntitiesManager.ActiveGameObjects;
+                var aGOs = EntitiesManager.GetObjectsOfType<ActiveGameObject>();
                 foreach (var aGO in aGOs)
                 {
                     string distance = string.Empty;
-                    if (DevMenu.GetBoolean("misc.activeGOs.distance"))
+                    if (_devMenu.GetBoolean("misc.activeGOs.distance"))
                     {
                         distance = Vector2.Distance(EntitiesManager.LocalPlayer.WorldPosition, aGO.WorldPosition).ToString();
                     }
@@ -168,46 +209,98 @@ namespace PipDeveloper
                     Console.WriteLine(aGO.ObjectName + (string.IsNullOrEmpty(distance) ? string.Empty : (" - Distance: " + distance)));
                 }
 
-                DevMenu.SetBoolean("misc.activeGOs", false);
+                _devMenu.SetBoolean("misc.activeGOs", false);
             }
 
-            if (DevMenu.GetBoolean("misc.mySpellRadius"))
+            if (_devMenu.GetBoolean("misc.ingameGOs"))
+            {
+                var iGOs = EntitiesManager.GetObjectsOfType<InGameObject>();
+                foreach (var iGO in iGOs)
+                {
+                    Console.WriteLine(iGO.ObjectName);
+                    //var asAGO = iGO as ActiveGameObject;
+                    //if (asAGO != null)
+                    //{
+                    //    Console.WriteLine(asAGO.ObjectName + " is of type ActiveGameObject - Distance: " + Vector2.Distance(DevHero.WorldPosition, asAGO.WorldPosition).ToString());
+                    //}
+                    //else
+                    //{
+                    //    Console.WriteLine(iGO.ObjectName + " is not of type ActiveGameObject");
+                    //}
+                }
+
+                _devMenu.SetBoolean("misc.ingameGOs", false);
+            }
+
+            if (_devMenu.GetBoolean("misc.damageableGOs"))
+            {
+                var dGOs = EntitiesManager.GetObjectsOfType<DamageableObject>();
+                foreach (var dGO in dGOs)
+                {
+                    string distance = string.Empty;
+                    if (_devMenu.GetBoolean("misc.damageableGOs.distance"))
+                    {
+                        distance = Vector2.Distance(EntitiesManager.LocalPlayer.WorldPosition, dGO.WorldPosition).ToString();
+                    }
+
+                    Console.WriteLine(dGO.ObjectName + (string.IsNullOrEmpty(distance) ? string.Empty : (" - Distance: " + distance)));
+                }
+
+                _devMenu.SetBoolean("misc.damageableGOs", false);
+            }
+
+            if (_devMenu.GetBoolean("misc.dummyGOs"))
+            {
+                var dummyGOs = EntitiesManager.GetObjectsOfType<ArenaDummy>();
+                foreach (var dummyGO in dummyGOs)
+                {
+                    string distance = string.Empty;
+                    if (_devMenu.GetBoolean("misc.dummyGOs.distance"))
+                    {
+                        distance = Vector2.Distance(EntitiesManager.LocalPlayer.WorldPosition, dummyGO.WorldPosition).ToString();
+                    }
+
+                    Console.WriteLine(dummyGO.ObjectName + (string.IsNullOrEmpty(distance) ? string.Empty : (" - Distance: " + distance)));
+                }
+
+                _devMenu.SetBoolean("misc.dummyGOs", false);
+            }
+
+            if (_devMenu.GetBoolean("misc.mySpellRadius"))
             {
                 Console.WriteLine("Spell Collision Radius: " + DevHero.SpellCollisionRadius);
 
-                DevMenu.SetBoolean("misc.mySpellRadius", false);
+                _devMenu.SetBoolean("misc.mySpellRadius", false);
             }
 
-            if (DevMenu.GetBoolean("misc.charName"))
+            if (_devMenu.GetBoolean("misc.charName"))
             {
                 Console.WriteLine("My charName is: " + DevHero.CharName);
 
-                DevMenu.SetBoolean("misc.charName", false);
+                _devMenu.SetBoolean("misc.charName", false);
             }
 
-            if (DevMenu.GetBoolean("misc.spellsNames"))
+            if (_devMenu.GetBoolean("misc.spellsNames"))
             {
-                foreach (var aHud in LocalPlayer.AbilitesHud)
+                foreach (var aHud in LocalPlayer.AbilitiesHud)
                 {
                     Console.WriteLine("Slot: " + aHud.SlotIndex + " - Name: " + aHud.Name);
 
-                    DevMenu.SetBoolean("misc.spellsNames", false);
+                    _devMenu.SetBoolean("misc.spellsNames", false);
                 }
             }
 
-            if (DevMenu.GetBoolean("misc.healths"))
+            if (_devMenu.GetBoolean("misc.healths"))
             {
                 Console.WriteLine("Health: " + DevHero.Health);
                 Console.WriteLine("MaxHealth: " + DevHero.MaxHealth);
                 Console.WriteLine("RecoveryHealth: " + DevHero.RecoveryHealth);
                 Console.WriteLine("MaxRecoveryHealth: " + DevHero.MaxRecoveryHealth);
-                Console.WriteLine("CriticalHealth: " + DevHero.CriticalHealth);
-                Console.WriteLine("MaxCriticalHealth: " + DevHero.MaxCriticalHealth);
 
-                DevMenu.SetBoolean("misc.healths", false);
+                _devMenu.SetBoolean("misc.healths", false);
             }
 
-            if (DevMenu.GetBoolean("misc.buffNames"))
+            if (_devMenu.GetBoolean("misc.buffNames"))
             {
                 if (DevHero.Buffs.Any())
                 {
@@ -221,13 +314,13 @@ namespace PipDeveloper
                     Console.WriteLine("No buff detected on your Player");
                 }
 
-                DevMenu.SetBoolean("misc.buffNames", false);
+                _devMenu.SetBoolean("misc.buffNames", false);
             }
         }
 
         private static void SpecialDebug()
         {
-            //if (DevMenu.GetBoolean("debug.stw.cameraInfo"))
+            //if (_devMenu.GetBoolean("debug.stw.cameraInfo"))
             //{
             //    UnityEngine.Camera cam = UnityEngine.Camera.main;
 
@@ -237,7 +330,7 @@ namespace PipDeveloper
             //    Console.WriteLine("Name: " + cam.name);
             //    Console.WriteLine(string.Empty);
 
-            //    DevMenu.SetBoolean("debug.stw.cameraInfo", false);
+            //    _devMenu.SetBoolean("debug.stw.cameraInfo", false);
             //}
         }
 
@@ -248,32 +341,32 @@ namespace PipDeveloper
                 return;
             }
 
-            if (DevMenu.GetBoolean("draw.customCircle.increase"))
+            if (_devMenu.GetBoolean("draw.customCircle.increase"))
             {
-                DevMenu.SetSlider("draw.customCircle.range", DevMenu.GetSlider("draw.customCircle.range") + 0.1f);
-                DevMenu.SetBoolean("draw.customCircle.increase", false);
+                _devMenu.SetSlider("draw.customCircle.range", _devMenu.GetSlider("draw.customCircle.range") + 0.1f);
+                _devMenu.SetBoolean("draw.customCircle.increase", false);
             }
 
-            if (DevMenu.GetBoolean("draw.customCircle.decrease"))
+            if (_devMenu.GetBoolean("draw.customCircle.decrease"))
             {
-                DevMenu.SetSlider("draw.customCircle.range", DevMenu.GetSlider("draw.customCircle.range") - 0.1f);
-                DevMenu.SetBoolean("draw.customCircle.decrease", false);
+                _devMenu.SetSlider("draw.customCircle.range", _devMenu.GetSlider("draw.customCircle.range") - 0.1f);
+                _devMenu.SetBoolean("draw.customCircle.decrease", false);
             }
 
-            if (DevMenu.GetBoolean("draw.customCircle"))
+            if (_devMenu.GetBoolean("draw.customCircle"))
             {
-                var range = DevMenu.GetSlider("draw.customCircle.range");
+                var range = _devMenu.GetSlider("draw.customCircle.range");
                 Drawing.DrawCircle(EntitiesManager.LocalPlayer.WorldPosition, range, UnityEngine.Color.green);
             }
 
-            if (DevMenu.GetBoolean("debug.stw"))
+            if (_devMenu.GetBoolean("debug.stw"))
             {
                 UnityEngine.Camera cam = UnityEngine.Camera.main;
 
-                var sliderX = DevMenu.GetSlider("debug.stw.xSlider");
-                var sliderY = DevMenu.GetSlider("debug.stw.ySlider");
+                var sliderX = _devMenu.GetSlider("debug.stw.xSlider");
+                var sliderY = _devMenu.GetSlider("debug.stw.ySlider");
 
-                var useSliders = DevMenu.GetBoolean("debug.stw.ray.useSliders");
+                var useSliders = _devMenu.GetBoolean("debug.stw.ray.useSliders");
                 UnityEngine.Ray ray = cam.ScreenPointToRay(useSliders ? new UnityEngine.Vector3(sliderX, sliderY) : UnityEngine.Input.mousePosition);
                 UnityEngine.Plane plane = new UnityEngine.Plane(UnityEngine.Vector3.up, UnityEngine.Vector3.zero);
 
@@ -288,12 +381,12 @@ namespace PipDeveloper
                 }
             }
 
-            if (DevMenu.Get<MenuKeybind>("debug.keybind").CurrentValue)
+            if (_devMenu.Get<MenuKeybind>("debug.keybind").CurrentValue)
             {
                 Drawing.DrawCircle(DevHero.WorldPosition, 2f, UnityEngine.Color.yellow);
             }
 
-            if (DevMenu.Get<MenuKeybind>("debug.keybind.toggle").CurrentValue)
+            if (_devMenu.Get<MenuKeybind>("debug.keybind.toggle").CurrentValue)
             {
                 Drawing.DrawCircle(DevHero.WorldPosition, 3f, UnityEngine.Color.magenta);
             }

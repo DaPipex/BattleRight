@@ -5,7 +5,7 @@
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProjectGuid>{FD5611B0-6536-418E-8FD3-E377D58E0613}</ProjectGuid>
-    <OutputType>Exe</OutputType>
+    <OutputType>Library</OutputType>
     <RootNamespace>PipJade</RootNamespace>
     <AssemblyName>PipJade</AssemblyName>
     <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
@@ -30,20 +30,23 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
+  <PropertyGroup>
+    <StartupObject />
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="BattleRight.Core">
       <HintPath>..\..\..\..\Downloads\BR\Release\System\BattleRight.Core.dll</HintPath>
     </Reference>
+    <Reference Include="BattleRight.Helper, Version=1.0.0.0, Culture=neutral, PublicKeyToken=889728e60ee12fc0, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\..\Downloads\BR\Release\System\BattleRight.Helper.dll</HintPath>
+    </Reference>
+    <Reference Include="BattleRight.Sandbox, Version=1.0.0.0, Culture=neutral, PublicKeyToken=17d7f475c70d8a09, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\..\Downloads\BR\Release\System\BattleRight.Sandbox.dll</HintPath>
+    </Reference>
     <Reference Include="BattleRight.SDK">
       <HintPath>..\..\..\..\Downloads\BR\Release\System\BattleRight.SDK.dll</HintPath>
-    </Reference>
-    <Reference Include="NewPrediction, Version=1.0.0.0, Culture=neutral, processorArchitecture=x86">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\..\Downloads\BR\Release\System\NewPrediction.dll</HintPath>
-    </Reference>
-    <Reference Include="PipLibrary, Version=1.0.0.0, Culture=neutral, processorArchitecture=x86">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\..\Downloads\BR\Release\System\PipLibrary.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -53,14 +56,17 @@
     <Reference Include="System.Xml" />
     <Reference Include="UnityEngine, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>bin\Debug\UnityEngine.dll</HintPath>
+      <HintPath>..\..\..\..\Downloads\BR\Release\System\UnityEngine.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="MyUtils.cs" />
-    <Compile Include="PipJade.cs" />
+    <Compile Include="LibrariesFiles\Extensions\MenuExtensions.cs" />
+    <Compile Include="LibrariesFiles\Extensions\PlayerExtensions.cs" />
+    <Compile Include="LibrariesFiles\Utils\MathUtils.cs" />
+    <Compile Include="LibrariesFiles\Utils\MiscUtils.cs" />
+    <Compile Include="LibrariesFiles\Utils\MyTargetSelector.cs" />
     <Compile Include="PipJade2.cs" />
-    <Compile Include="Program.cs" />
+    <Compile Include="PipJade3.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
