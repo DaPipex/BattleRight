@@ -61,10 +61,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="LibrariesFiles\Extensions\MenuExtensions.cs" />
-    <Compile Include="LibrariesFiles\Extensions\PlayerExtensions.cs" />
     <Compile Include="LibrariesFiles\Utils\MathUtils.cs" />
     <Compile Include="LibrariesFiles\Utils\MiscUtils.cs" />
-    <Compile Include="LibrariesFiles\Utils\MyTargetSelector.cs" />
     <Compile Include="PipJade2.cs" />
     <Compile Include="PipJade3.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

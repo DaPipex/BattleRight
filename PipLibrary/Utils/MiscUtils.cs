@@ -24,10 +24,10 @@ namespace PipLibrary.Utils
         {
             var abilityHudData = LocalPlayer.GetAbilityHudData(slot);
 
-            return abilityHudData != null && abilityHudData.CooldownTime <= 0 && abilityHudData.EnergyCost <= EntitiesManager.LocalPlayer.Energy;
+            return abilityHudData != null && abilityHudData.CooldownLeft <= 0 && abilityHudData.EnergyCost <= EntitiesManager.LocalPlayer.Energy;
         }
 
-        public static int EnemiesAround(ActiveGameObject gameObj, float distance)
+        public static int EnemiesAround(this ActiveGameObject gameObj, float distance)
         {
             return EntitiesManager.EnemyTeam.Count(x => !x.IsDead && x.Distance(gameObj) <= distance);
         }
@@ -49,7 +49,7 @@ namespace PipLibrary.Utils
             return player.Buffs.Any(x => x.ObjectName.Equals(buffName));
         }
 
-        public static Vector2 ScreenToWorld(this Vector2 screenPos)
+        public static Vector2 TempScreenToWorld(this Vector2 screenPos)
         {
             var cam = UnityEngine.Camera.main;
             var ray = cam.ScreenPointToRay(new UnityEngine.Vector3(screenPos.X, screenPos.Y));

@@ -17,7 +17,7 @@ namespace PipLibrary.Extensions
 
             if (item == null)
             {
-                throw new Exception("GetBoolean: menuItem '" + menuItem + "' doesn't exist");
+                throw new Exception("GetBoolean: menuItem '" + menuItem + "' doesn't exist in " + menu.Name);
             }
             else
             {
@@ -31,7 +31,7 @@ namespace PipLibrary.Extensions
 
             if (item == null)
             {
-                throw new Exception("SetBoolean: menuItem '" + menuItem + "' doesn't exist");
+                throw new Exception("SetBoolean: menuItem '" + menuItem + "' doesn't exist in " + menu.Name);
             }
             else
             {
@@ -45,7 +45,7 @@ namespace PipLibrary.Extensions
 
             if (item == null)
             {
-                throw new Exception("GetSlider: menuItem '" + menuItem + "' doesn't exist");
+                throw new Exception("GetSlider: menuItem '" + menuItem + "' doesn't exist in " + menu.Name);
             }
             else
             {
@@ -59,7 +59,7 @@ namespace PipLibrary.Extensions
 
             if (item == null)
             {
-                throw new Exception("SetSlider: menuItem '" + menuItem + "' doesn't exist");
+                throw new Exception("SetSlider: menuItem '" + menuItem + "' doesn't exist in " + menu.Name);
             }
             else
             {
@@ -73,7 +73,7 @@ namespace PipLibrary.Extensions
 
             if (item == null)
             {
-                throw new Exception("GetKeybind: menuItem '" + menuItem + "' doesn't exist");
+                throw new Exception("GetKeybind: menuItem '" + menuItem + "' doesn't exist in " + menu.Name);
             }
             else
             {
@@ -87,7 +87,7 @@ namespace PipLibrary.Extensions
 
             if (item == null)
             {
-                throw new Exception("GetIntSlider: menuItem '" + menuItem + "' doesn't exist");
+                throw new Exception("GetIntSlider: menuItem '" + menuItem + "' doesn't exist in " + menu.Name);
             }
             else
             {
@@ -101,11 +101,25 @@ namespace PipLibrary.Extensions
 
             if (item == null)
             {
-                throw new Exception("SetIntSlider: menuItem '" + menuItem + "' doesn't exist");
+                throw new Exception("SetIntSlider: menuItem '" + menuItem + "' doesn't exist in " + menu.Name);
             }
             else
             {
                 item.CurrentValue = value;
+            }
+        }
+
+        public static Menu GetSubmenu(this Menu menu, string submenuName)
+        {
+            var submenu = menu.Get<Menu>(submenuName);
+
+            if (submenu == null)
+            {
+                throw new Exception("GetSubmenu: submenu '" + submenuName + "' doesn't exist in " + menu.Name);
+            }
+            else
+            {
+                return submenu;
             }
         }
     }

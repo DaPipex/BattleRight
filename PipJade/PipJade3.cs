@@ -71,6 +71,7 @@ namespace PipJade
             ComboMenu.Add(new MenuCheckBox("combo.useE", "Use E (Disabling Shot) to interrupt", true));
             ComboMenu.Add(new MenuCheckBox("combo.useR", "Use R (Junk Shot)", true));
             ComboMenu.Add(new MenuIntSlider("combo.useR.minEnergyBars", "    ^ Min energy bars", 3, 4, 1));
+            ComboMenu.Add(new MenuCheckBox("combo.useR.closeRange", "    ^ Only use at close range", true));
             ComboMenu.Add(new MenuCheckBox("combo.useEX1", "Use EX1 (Snap Shot)", false));
             ComboMenu.Add(new MenuIntSlider("combo.useEX1.minEnergyBars", "    ^ Min energy bars", 2, 4, 1));
             ComboMenu.Add(new MenuCheckBox("combo.useF", "Use F (Explosive Shells)", true));
@@ -140,9 +141,9 @@ namespace PipJade
 
             var M1Target = TargetSelector.GetTarget(targetMode, M1Range);
             var M2_FTarget = TargetSelector.GetTarget(targetMode, M2Range);
-            var RTarget = TargetSelector.GetTarget(targetMode, RRange);
+            var RTarget = TargetSelector.GetTarget(targetMode, ComboMenu.GetBoolean("combo.useR.closeRange") ? RRange / 2f : RRange);
             var ETarget = EntitiesManager.EnemyTeam
-                .Where(x => x.IsValid && !x.IsDead && (x.IsCasting || x.IsChanneling) && x.Distance(JadeHero) < ERange)
+                .Where(x => x.IsValid && !x.IsDead && (x.IsCasting || x.IsChanneling) && !x.IsCountering && x.Distance(JadeHero) < ERange)
                 .OrderBy(x => x.Distance(JadeHero))
                 .FirstOrDefault();
 
@@ -150,8 +151,7 @@ namespace PipJade
 
             if (!isCastingOrChanneling && ComboMenu.GetBoolean("combo.useSpace") && MiscUtils.CanCast(AbilitySlot.Ability3) && JadeHero.EnemiesAround(3f) > 0)
             {
-                var myStealth = EntitiesManager.GetObjectsByName("Stealth").FirstOrDefault(x => x.TeamId == JadeHero.TeamId);
-                if (myStealth == null) //Not stealthed
+                if (!MiscUtils.HasBuff(JadeHero, "Stealth")) //Not stealthed
                 {
                     LocalPlayer.PressAbility(AbilitySlot.Ability3, true);
                 }
@@ -310,7 +310,7 @@ namespace PipJade
 
         private static void KillstealMode()
         {
-            var possibleEnemies = EntitiesManager.EnemyTeam.Where(x => x.IsValid && !x.IsDead && !x.IsCountering);
+            var possibleEnemies = EntitiesManager.EnemyTeam.Where(x => x.IsValid && !x.IsDead && !x.IsCountering && !x.IsImmaterial);
 
             foreach (var enemy in possibleEnemies)
             {
