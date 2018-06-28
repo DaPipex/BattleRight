@@ -8,7 +8,9 @@ Fully customizable menu and drawings.
 #### * PipDeveloper
 Helper script to gather information about your projectiles, buffs, objects in the game, drawing assistant, etc.
 
+#### * PipLibrary
+Small library with some menu extensions and misc utils.
+
 ## Outdated/Not working Scripts/Libraries
 #### * PipZander
-#### * PipLibrary
 #### * NewPrediction
