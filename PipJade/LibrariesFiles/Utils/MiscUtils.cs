@@ -6,6 +6,7 @@ using System.Text;
 using BattleRight.Core;
 using BattleRight.Core.Enumeration;
 using BattleRight.Core.GameObjects;
+using BattleRight.Core.GameObjects.Models;
 using BattleRight.Core.Math;
 using BattleRight.Core.Models;
 
@@ -24,15 +25,15 @@ namespace PipLibrary.Utils
         {
             var abilityHudData = LocalPlayer.GetAbilityHudData(slot);
 
-            return abilityHudData != null && abilityHudData.CooldownLeft <= 0 && abilityHudData.EnergyCost <= EntitiesManager.LocalPlayer.Energy;
+            return abilityHudData != null && abilityHudData.CooldownLeft <= 0 && abilityHudData.EnergyCost <= EntitiesManager.LocalPlayer.Energized.Energy;
         }
 
-        public static int EnemiesAround(this ActiveGameObject gameObj, float distance)
+        public static int EnemiesAround(this InGameObject gameObj, float distance)
         {
-            return EntitiesManager.EnemyTeam.Count(x => !x.IsDead && x.Distance(gameObj) <= distance);
+            return EntitiesManager.EnemyTeam.Count(x => !x.Living.IsDead && x.Distance(gameObj.Get<MapGameObject>().Position) <= distance);
         }
 
-        public static bool HasBuff(this Player player, string buffName, out Buff buff)
+        public static bool HasBuff(this Character player, string buffName, out Buff buff)
         {
             if (player.Buffs.Any(x => x.ObjectName.Equals(buffName)))
             {
@@ -44,7 +45,7 @@ namespace PipLibrary.Utils
             return false;
         }
 
-        public static bool HasBuff(this Player player, string buffName)
+        public static bool HasBuff(this Character player, string buffName)
         {
             return player.Buffs.Any(x => x.ObjectName.Equals(buffName));
         }

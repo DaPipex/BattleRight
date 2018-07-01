@@ -62,7 +62,7 @@ namespace PipLucie
         public void OnInit()
         {
             LucieMenu = new Menu("pipluciemenu", "DaPip's Lucie");
-            LucieMenu.Add(new MenuCheckBox("main.includePing", "Include ping in calculations?", false));
+            LucieMenu.Add(new MenuCheckBox("main.includePing", "Include ping in prediction?", false));
 
             KeysMenu = new Menu("keysmenu", "Keys", true);
             KeysMenu.Add(new MenuKeybind("keys.combo", "Combo Key", UnityEngine.KeyCode.LeftControl));
@@ -111,7 +111,7 @@ namespace PipLucie
 
             LucieHero = EntitiesManager.LocalPlayer;
 
-            if (LucieHero.ChampionEnum != Champion.Lucie)
+            if (LucieHero.CharName != "Lucie")
             {
                 return;
             }
@@ -508,7 +508,7 @@ namespace PipLucie
                 return;
             }
 
-            if (LucieHero.ChampionEnum != Champion.Lucie)
+            if (LucieHero.CharName != "Lucie")
             {
                 return;
             }

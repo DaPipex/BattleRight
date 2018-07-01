@@ -7,6 +7,7 @@ using BattleRight.Core;
 using BattleRight.Core.Models;
 using BattleRight.Core.Enumeration;
 using BattleRight.Core.GameObjects;
+using BattleRight.Core.GameObjects.Models;
 using BattleRight.Core.Math;
 
 using BattleRight.SDK;
@@ -28,7 +29,7 @@ namespace PipJade
         private static Menu JadeMenu;
         private static Menu KeysMenu, ComboMenu, DrawingsMenu, KSMenu;
 
-        private static Player JadeHero;
+        private static Character JadeHero;
 
         private static AbilitySlot? LastAbilityFired = null;
 
@@ -51,13 +52,16 @@ namespace PipJade
         private const float RRadius = 0.3f; //Not precise, need to take cone's shape into consideration
         private const float FRadius = 0.4f;
 
+        private static float FinalDelay;
+
         public void OnInit()
         {
             JadeMenu = new Menu("pipjademenu", "DaPip's Jade");
+            JadeMenu.Add(new MenuCheckBox("main.includePing", "Include ping in prediction?", false));
 
             KeysMenu = new Menu("keysmenu", "Keys", true);
             KeysMenu.Add(new MenuKeybind("keys.combo", "Combo Key", UnityEngine.KeyCode.LeftControl));
-            //KeysMenu.Add(new MenuKeybind("keys.orb", "Orb Key", UnityEngine.KeyCode.Mouse3));
+            KeysMenu.Add(new MenuKeybind("keys.orb", "Orb Key", UnityEngine.KeyCode.Mouse3));
             KeysMenu.Add(new MenuKeybind("keys.changeTargeting", "Change targeting mode", UnityEngine.KeyCode.T, false, true));
             JadeMenu.Add(KeysMenu);
 
@@ -78,7 +82,7 @@ namespace PipJade
             JadeMenu.Add(ComboMenu);
 
             KSMenu = new Menu("ksmenu", "Killsteal", true);
-            KSMenu.AddLabel("These work regardless of Combo settings");
+            KSMenu.AddLabel("Combo Key must be held for these to work");
             KSMenu.Add(new MenuCheckBox("ks.useEX1", "Killsteal with EX1", true));
             KSMenu.Add(new MenuCheckBox("ks.useR", "Killsteal with R", true));
             JadeMenu.Add(KSMenu);
@@ -121,17 +125,19 @@ namespace PipJade
 
             LocalPlayer.EditAimPosition = false;
 
-            KillstealMode();
+            FinalDelay = JadeMenu.GetBoolean("main.includePing") ? JadeHero.AbilitySystem.Latency / 2f : 0f;
+
 
             if (KeysMenu.GetKeybind("keys.combo"))
             {
+                KillstealMode();
                 ComboMode();
             }
 
-            //if (KeysMenu.GetKeybind("keys.orb"))
-            //{
-            //    OrbMode();
-            //}
+            if (KeysMenu.GetKeybind("keys.orb"))
+            {
+                OrbMode();
+            }
         }
 
         private static void ComboMode()
@@ -143,13 +149,13 @@ namespace PipJade
             var M2_FTarget = TargetSelector.GetTarget(targetMode, M2Range);
             var RTarget = TargetSelector.GetTarget(targetMode, ComboMenu.GetBoolean("combo.useR.closeRange") ? RRange / 2f : RRange);
             var ETarget = EntitiesManager.EnemyTeam
-                .Where(x => x.IsValid && !x.IsDead && (x.IsCasting || x.IsChanneling) && !x.IsCountering && x.Distance(JadeHero) < ERange)
+                .Where(x => x.IsValid && !x.Living.IsDead && (x.AbilitySystem.IsCasting || x.IsChanneling) && !x.IsCountering && x.Distance(JadeHero) < ERange)
                 .OrderBy(x => x.Distance(JadeHero))
                 .FirstOrDefault();
 
-            var isCastingOrChanneling = JadeHero.IsCasting || JadeHero.IsChanneling;
+            var isCastingOrChanneling = JadeHero.AbilitySystem.IsCasting || JadeHero.IsChanneling;
 
-            if (!isCastingOrChanneling && ComboMenu.GetBoolean("combo.useSpace") && MiscUtils.CanCast(AbilitySlot.Ability3) && JadeHero.EnemiesAround(3f) > 0)
+            if (!isCastingOrChanneling && ComboMenu.GetBoolean("combo.useSpace") && MiscUtils.CanCast(AbilitySlot.Ability3) && JadeHero.EnemiesAround(2.5f) > 0)
             {
                 if (!MiscUtils.HasBuff(JadeHero, "Stealth")) //Not stealthed
                 {
@@ -177,7 +183,7 @@ namespace PipJade
                     case AbilitySlot.Ability5: //E
                         if (ETarget != null)
                         {
-                            var pred = JadeHero.GetPrediction(ETarget, ESpeed, ERange, ERadius, SkillType.Line, 0f, CollisionFlags.InvisWalls);
+                            var pred = JadeHero.GetPrediction(ETarget, ESpeed, ERange, ERadius, SkillType.Line, FinalDelay, CollisionFlags.InvisWalls);
 
                             if (pred.HitChancePercent >= 35f)
                             {
@@ -189,7 +195,7 @@ namespace PipJade
                     case AbilitySlot.Ability7: //F
                         if (M2_FTarget != null)
                         {
-                            var pred = JadeHero.GetPrediction(M2_FTarget, FSpeed, M2Range, FRadius, SkillType.Line, 0f, CollisionFlags.InvisWalls);
+                            var pred = JadeHero.GetPrediction(M2_FTarget, FSpeed, M2Range, FRadius, SkillType.Line, FinalDelay, CollisionFlags.InvisWalls);
 
                             if (pred.HitChancePercent >= 50f)
                             {
@@ -201,7 +207,7 @@ namespace PipJade
                     case AbilitySlot.Ability6: //R
                         if (RTarget != null)
                         {
-                            var pred = JadeHero.GetPrediction(RTarget, RSpeed, RRange, RRadius, SkillType.Line, 0f, CollisionFlags.InvisWalls);
+                            var pred = JadeHero.GetPrediction(RTarget, RSpeed, RRange, RRadius, SkillType.Line, FinalDelay, CollisionFlags.InvisWalls);
 
                             if (pred.HitChancePercent >= 40f)
                             {
@@ -214,7 +220,7 @@ namespace PipJade
                     case AbilitySlot.EXAbility1:
                         if (M2_FTarget != null)
                         {
-                            var pred = JadeHero.GetPrediction(M2_FTarget, M2Speed, M2Range, M2Radius, SkillType.Line, 0f, CollisionFlags.InvisWalls);
+                            var pred = JadeHero.GetPrediction(M2_FTarget, M2Speed, M2Range, M2Radius, SkillType.Line, FinalDelay, CollisionFlags.InvisWalls);
 
                             if (pred.HitChancePercent >= 50f)
                             {
@@ -226,7 +232,7 @@ namespace PipJade
                     case AbilitySlot.Ability1: //M1
                         if (M1Target != null)
                         {
-                            var pred = JadeHero.GetPrediction(M1Target, M1Speed, M1Range, M1Radius, SkillType.Line, 0f, CollisionFlags.InvisWalls /*| CollisionFlags.NPCBlocker*/);
+                            var pred = JadeHero.GetPrediction(M1Target, M1Speed, M1Range, M1Radius, SkillType.Line, FinalDelay, CollisionFlags.InvisWalls /*| CollisionFlags.NPCBlocker*/);
 
                             if (pred.HitChancePercent >= 50f)
                             {
@@ -263,7 +269,7 @@ namespace PipJade
             if (ComboMenu.GetBoolean("combo.useR") && MiscUtils.CanCast(AbilitySlot.Ability6))
             {
                 var energyRequired = ComboMenu.GetIntSlider("combo.useR.minEnergyBars") * 25;
-                if (energyRequired <= JadeHero.Energy)
+                if (energyRequired <= JadeHero.Energized.Energy)
                 {
                     if (LastAbilityFired == null && RTarget != null)
                     {
@@ -288,7 +294,7 @@ namespace PipJade
             if (ComboMenu.GetBoolean("combo.useEX1") && MiscUtils.CanCast(AbilitySlot.EXAbility1))
             {
                 var energyRequired = ComboMenu.GetIntSlider("combo.useEX1.minEnergyBars") * 25;
-                if (energyRequired <= JadeHero.Energy)
+                if (energyRequired <= JadeHero.Energized.Energy)
                 {
                     if (LastAbilityFired == null && M2_FTarget != null)
                     {
@@ -298,7 +304,7 @@ namespace PipJade
                 }
             }
 
-            if (ComboMenu.GetBoolean("combo.useM1") && JadeHero.Blessings > 0)
+            if (ComboMenu.GetBoolean("combo.useM1") && JadeHero.Blessings.Blessings > 0)
             {
                 if (LastAbilityFired == null && M1Target != null)
                 {
@@ -310,17 +316,23 @@ namespace PipJade
 
         private static void KillstealMode()
         {
-            var possibleEnemies = EntitiesManager.EnemyTeam.Where(x => x.IsValid && !x.IsDead && !x.IsCountering && !x.IsImmaterial);
+            var possibleEnemies = EntitiesManager.EnemyTeam.Where(x => x.IsValid && !x.Living.IsDead && !x.IsCountering && !x.PhysicsCollision.IsImmaterial);
 
             foreach (var enemy in possibleEnemies)
             {
-                if (KSMenu.GetBoolean("ks.useEX1") && LastAbilityFired == null && enemy.Health <= 12f && enemy.Distance(JadeHero) < M2Range && MiscUtils.CanCast(AbilitySlot.EXAbility1)) //EX1
+                if (KSMenu.GetBoolean("ks.useEX1") && LastAbilityFired == null && enemy.Living.Health <= 12f && enemy.Distance(JadeHero) < M2Range && MiscUtils.CanCast(AbilitySlot.EXAbility1)) //EX1
                 {
                     LocalPlayer.PressAbility(AbilitySlot.EXAbility1, true);
                     LastAbilityFired = AbilitySlot.EXAbility1;
                 }
 
-                if (KSMenu.GetBoolean("ks.useR") && LastAbilityFired == null && enemy.Health <= 6f && enemy.Distance(JadeHero) < RRange && MiscUtils.CanCast(AbilitySlot.Ability6)) //R
+                if (KSMenu.GetBoolean("ks.useR") && LastAbilityFired == null && enemy.Living.Health <= 6f && enemy.Distance(JadeHero) < RRange && MiscUtils.CanCast(AbilitySlot.Ability6)) //R
+                {
+                    LocalPlayer.PressAbility(AbilitySlot.Ability6, true);
+                    LastAbilityFired = AbilitySlot.Ability6;
+                }
+
+                if (KSMenu.GetBoolean("ks.useR") && LastAbilityFired == null && enemy.Living.Health <= 6f * 3f && enemy.Distance(JadeHero) < 1.75f && MiscUtils.CanCast(AbilitySlot.Ability6)) //R
                 {
                     LocalPlayer.PressAbility(AbilitySlot.Ability6, true);
                     LastAbilityFired = AbilitySlot.Ability6;
@@ -331,30 +343,32 @@ namespace PipJade
         private static void OrbMode()
         {
             var orb = EntitiesManager.CenterOrb;
+            var orbHealth = orb.Get<LivingObject>().Health;
+            var orbPos = orb.Get<MapGameObject>().Position;
 
-            if (orb.Health <= 0)
+            if (orbHealth <= 0)
             {
                 return;
             }
 
             LocalPlayer.EditAimPosition = true;
-            LocalPlayer.Aim(orb.WorldPosition);
+            LocalPlayer.Aim(orbPos);
 
-            if (JadeHero.Distance(orb) <= M2Range)
+            if (JadeHero.Distance(orbPos) <= M2Range)
             {
-                if (MiscUtils.CanCast(AbilitySlot.EXAbility1) && orb.Health <= 12f)
+                if (MiscUtils.CanCast(AbilitySlot.EXAbility1) && orbHealth <= 12f)
                 {
                     LocalPlayer.PressAbility(AbilitySlot.EXAbility1, true);
                 }
-                else if (MiscUtils.CanCast(AbilitySlot.Ability2) && orb.Health <= 38f)
+                else if (MiscUtils.CanCast(AbilitySlot.Ability2) && orbHealth <= 38f)
                 {
                     LocalPlayer.PressAbility(AbilitySlot.Ability2, true);
                 }
             }
 
-            if (JadeHero.Distance(orb) <= M1Range)
+            if (JadeHero.Distance(orbPos) <= M1Range)
             {
-                if (JadeHero.Blessings > 0)
+                if (JadeHero.Blessings.Blessings > 0)
                 {
                     if (orb.EnemiesAround(6f) == 0)
                     {
@@ -362,7 +376,7 @@ namespace PipJade
                     }
                     else
                     {
-                        if (orb.Health <= 6 * 4 || orb.Health >= 6 * 4 + (6 * 4 / 2))
+                        if (orbHealth <= 6 * 4 || orbHealth >= 6 * 4 + (6 * 4 / 2))
                         {
                             LocalPlayer.PressAbility(AbilitySlot.Ability1, true);
                         }
@@ -370,7 +384,7 @@ namespace PipJade
                 }
             }
 
-            LocalPlayer.EditAimPosition = false;
+            //LocalPlayer.EditAimPosition = false;
         }
 
         private void OnDraw(EventArgs args)
@@ -390,32 +404,32 @@ namespace PipJade
 
             if (DrawingsMenu.GetBoolean("draw.rangeM1"))
             {
-                Drawing.DrawCircle(JadeHero.WorldPosition, M1Range, UnityEngine.Color.red);
+                Drawing.DrawCircle(JadeHero.MapObject.Position, M1Range, UnityEngine.Color.red);
             }
 
             if (DrawingsMenu.GetBoolean("draw.rangeM2"))
             {
-                Drawing.DrawCircle(JadeHero.WorldPosition, M2Range, UnityEngine.Color.red);
+                Drawing.DrawCircle(JadeHero.MapObject.Position, M2Range, UnityEngine.Color.red);
             }
 
             if (DrawingsMenu.GetBoolean("draw.rangeM2.safeRange"))
             {
-                Drawing.DrawCircle(JadeHero.WorldPosition, ComboMenu.GetSlider("combo.useM2.safeRange"), UnityEngine.Color.blue);
+                Drawing.DrawCircle(JadeHero.MapObject.Position, ComboMenu.GetSlider("combo.useM2.safeRange"), UnityEngine.Color.blue);
             }
 
             if (DrawingsMenu.GetBoolean("draw.rangeSpace"))
             {
-                Drawing.DrawCircle(JadeHero.WorldPosition, SpaceRange, UnityEngine.Color.green);
+                Drawing.DrawCircle(JadeHero.MapObject.Position, SpaceRange, UnityEngine.Color.green);
             }
 
             if (DrawingsMenu.GetBoolean("draw.rangeR"))
             {
-                Drawing.DrawCircle(JadeHero.WorldPosition, RRange, UnityEngine.Color.red);
+                Drawing.DrawCircle(JadeHero.MapObject.Position, RRange, UnityEngine.Color.red);
             }
 
             if (DrawingsMenu.GetBoolean("draw.rangeF"))
             {
-                Drawing.DrawCircle(JadeHero.WorldPosition, FRange, UnityEngine.Color.magenta);
+                Drawing.DrawCircle(JadeHero.MapObject.Position, FRange, UnityEngine.Color.magenta);
             }
 
             if (DrawingsMenu.GetBoolean("draw.escapeSkillsScreen"))
