@@ -16,4 +16,3 @@ Small library with some menu extensions and misc utils.
 
 ## Outdated/Not working Scripts/Libraries
 #### * PipZander
-#### * NewPrediction
