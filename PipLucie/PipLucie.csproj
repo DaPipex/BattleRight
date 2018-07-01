@@ -4,11 +4,11 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{6DDD31D3-F575-49E8-BB8C-3D67413A0D39}</ProjectGuid>
+    <ProjectGuid>{7AA709D9-14F8-423A-905F-20C3F1A2B07C}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>NewPrediction</RootNamespace>
-    <AssemblyName>NewPrediction</AssemblyName>
+    <RootNamespace>PipLucie</RootNamespace>
+    <AssemblyName>PipLucie</AssemblyName>
     <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
@@ -30,9 +30,17 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="BattleRight.Core, Version=1.0.0.0, Culture=neutral, PublicKeyToken=65bb327b54febf4b, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
+    <Reference Include="BattleRight.Core">
       <HintPath>..\..\..\..\Downloads\BR\Release\System\BattleRight.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="BattleRight.Helper">
+      <HintPath>..\..\..\..\Downloads\BR\Release\System\BattleRight.Helper.dll</HintPath>
+    </Reference>
+    <Reference Include="BattleRight.Sandbox">
+      <HintPath>..\..\..\..\Downloads\BR\Release\System\BattleRight.Sandbox.dll</HintPath>
+    </Reference>
+    <Reference Include="BattleRight.SDK">
+      <HintPath>..\..\..\..\Downloads\BR\Release\System\BattleRight.SDK.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -40,15 +48,15 @@
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
+    <Reference Include="UnityEngine">
+      <HintPath>..\..\..\..\Downloads\BR\Release\System\UnityEngine.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Enumerations\Hitchance.cs" />
-    <Compile Include="Enumerations\SkillType.cs" />
-    <Compile Include="Extensions\PlayerExtensions.cs" />
-    <Compile Include="Geometry.cs" />
-    <Compile Include="Prediction.cs" />
-    <Compile Include="PredictionInput.cs" />
-    <Compile Include="PredictionOutput.cs" />
+    <Compile Include="LibrariesFiles\Extensions\MenuExtensions.cs" />
+    <Compile Include="LibrariesFiles\Utils\MathUtils.cs" />
+    <Compile Include="LibrariesFiles\Utils\MiscUtils.cs" />
+    <Compile Include="PipLucie.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
