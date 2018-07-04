@@ -33,6 +33,10 @@ namespace PipJade
 
         private static AbilitySlot? LastAbilityFired = null;
 
+        private static readonly List<Battlerite> Battlerites = new List<Battlerite>(5);
+
+        private const CollisionFlags ColFlags = CollisionFlags.InvisWalls | CollisionFlags.HighBlock | CollisionFlags.LowBlock;
+
         private const float M1Speed = 17f;
         private const float M2Speed = 28.5f;
         private const float ESpeed = 28f;
@@ -54,6 +58,10 @@ namespace PipJade
 
         private static float FinalDelay;
 
+        private static bool HasDeadlyFocus;
+        private static bool HasExplosiveJump;
+        private static bool HasMagicBullet;
+
         public void OnInit()
         {
             JadeMenu = new Menu("pipjademenu", "DaPip's Jade");
@@ -66,12 +74,14 @@ namespace PipJade
             JadeMenu.Add(KeysMenu);
 
             ComboMenu = new Menu("combomenu", "Combo", true);
+            ComboMenu.Add(new MenuCheckBox("combo.interrupt", "Interrupt casting when target lost or enters countering", true));
+            ComboMenu.Add(new MenuCheckBox("combo.noBulwark", "Don't shoot/Cancel shot if target has Bulwark", true));
             ComboMenu.Add(new MenuCheckBox("combo.useM1", "Use Left Mouse (Revolver Shot)", true));
             ComboMenu.Add(new MenuCheckBox("combo.useM2", "Use Right Mouse (Snipe) when in safe range", true));
             ComboMenu.Add(new MenuSlider("combo.useM2.safeRange", "    ^ Safe range", 7f, M2Range - 1f, 0f));
             ComboMenu.Add(new MenuCheckBox("combo.useSpace", "Use Space (Blast Vault) when enemies are too close", true));
             ComboMenu.Add(new MenuCheckBox("combo.useQ.reset", "Use Q (Stealth) if M2 (Snipe) is on cooldown", false));
-            ComboMenu.Add(new MenuCheckBox("combo.useQ.near", "Use Q (Stealth) when enemies are too close", false));
+            ComboMenu.Add(new MenuCheckBox("combo.useQ.near", "Use Q (Stealth) when enemies are too close", true));
             ComboMenu.Add(new MenuCheckBox("combo.useE", "Use E (Disabling Shot) to interrupt", true));
             ComboMenu.Add(new MenuCheckBox("combo.useR", "Use R (Junk Shot)", true));
             ComboMenu.Add(new MenuIntSlider("combo.useR.minEnergyBars", "    ^ Min energy bars", 3, 4, 1));
@@ -79,6 +89,7 @@ namespace PipJade
             ComboMenu.Add(new MenuCheckBox("combo.useEX1", "Use EX1 (Snap Shot)", false));
             ComboMenu.Add(new MenuIntSlider("combo.useEX1.minEnergyBars", "    ^ Min energy bars", 2, 4, 1));
             ComboMenu.Add(new MenuCheckBox("combo.useF", "Use F (Explosive Shells)", true));
+            ComboMenu.Add(new MenuSlider("combo.useF.safeRange", "    ^ Safe range", 3f, M2Range - 1f, 0f));
             JadeMenu.Add(ComboMenu);
 
             KSMenu = new Menu("ksmenu", "Killsteal", true);
@@ -88,6 +99,8 @@ namespace PipJade
             JadeMenu.Add(KSMenu);
 
             DrawingsMenu = new Menu("drawingsmenu", "Drawings", true);
+            DrawingsMenu.Add(new MenuCheckBox("draw.disableAll", "Disable all drawings", false));
+            DrawingsMenu.AddSeparator();
             DrawingsMenu.Add(new MenuCheckBox("draw.rangeM1", "Draw Left Mouse Range (Revolver Shot)", false));
             DrawingsMenu.Add(new MenuCheckBox("draw.rangeM2", "Draw Right Mouse Range (Snipe)", true));
             DrawingsMenu.Add(new MenuCheckBox("draw.rangeM2.safeRange", "Draw Right Mouse Safe-Range (Snipe)", false));
@@ -95,6 +108,7 @@ namespace PipJade
             DrawingsMenu.Add(new MenuCheckBox("draw.rangeE", "Draw E Range (Disabling Shot)", false));
             DrawingsMenu.Add(new MenuCheckBox("draw.rangeR", "Draw R Range (Junk Shot)", true));
             DrawingsMenu.Add(new MenuCheckBox("draw.rangeF", "Draw F Range (Explosive Shells)", false));
+            DrawingsMenu.Add(new MenuCheckBox("draw.rangeF.safeRange", "Draw F Safe-Range (Explosive Shells)", false));
             DrawingsMenu.Add(new MenuCheckBox("draw.escapeSkillsScreen", "Draw escape skills CDs on screen", true));
             JadeMenu.Add(DrawingsMenu);
 
@@ -102,6 +116,37 @@ namespace PipJade
 
             Game.OnUpdate += OnUpdate;
             Game.OnDraw += OnDraw;
+            Game.OnMatchStateUpdate += OnMatchStateUpdate;
+        }
+
+        private void OnMatchStateUpdate(MatchStateUpdate args)
+        {
+            if (JadeHero.CharName != "Gunner")
+            {
+                return;
+            }
+
+            if (args.OldMatchState == MatchState.BattleritePicking && args.NewMatchState != MatchState.BattleritePicking)
+            {
+                GetBattlerites();
+            }
+        }
+
+        private static void GetBattlerites()
+        {
+            if (Battlerites.Any())
+            {
+                Battlerites.Clear();
+            }
+
+            for (var i = 0; i < 5; i++)
+            {
+                var br = JadeHero.BattleriteSystem.GetEquippedBattlerite(i);
+                if (br != null)
+                {
+                    Battlerites.Add(br);
+                }
+            }
         }
 
         public void OnUnload()
@@ -125,8 +170,16 @@ namespace PipJade
 
             LocalPlayer.EditAimPosition = false;
 
-            FinalDelay = JadeMenu.GetBoolean("main.includePing") ? JadeHero.AbilitySystem.Latency / 2f : 0f;
+            //if (UnityEngine.Input.GetKeyDown(UnityEngine.KeyCode.G))
+            //{
+            //    GetBattlerites();
+            //}
 
+            FinalDelay = JadeMenu.GetBoolean("main.includePing") ? JadeHero.AbilitySystem.Latency / 2000f : 0f;
+
+            HasDeadlyFocus = Battlerites.Any(x => x.Name == "DeadlyFocusUpgrade");
+            HasExplosiveJump = Battlerites.Any(x => x.Name == "ExplosiveJumpUpgrade");
+            HasMagicBullet = Battlerites.Any(x => x.Name == "MagicBulletUpgrade");
 
             if (KeysMenu.GetKeybind("keys.combo"))
             {
@@ -147,15 +200,15 @@ namespace PipJade
 
             var M1Target = TargetSelector.GetTarget(targetMode, M1Range);
             var M2_FTarget = TargetSelector.GetTarget(targetMode, M2Range);
-            var RTarget = TargetSelector.GetTarget(targetMode, ComboMenu.GetBoolean("combo.useR.closeRange") ? RRange / 2f : RRange);
+            var RTarget = TargetSelector.GetTarget(targetMode, !ComboMenu.GetBoolean("combo.useR.closeRange") ? RRange : RRange / 2f);
             var ETarget = EntitiesManager.EnemyTeam
-                .Where(x => x.IsValid && !x.Living.IsDead && (x.AbilitySystem.IsCasting || x.IsChanneling) && !x.IsCountering && x.Distance(JadeHero) < ERange)
+                .Where(x => x.IsValid && !x.Living.IsDead && (x.AbilitySystem.IsCasting || x.IsChanneling) && !x.IsCountering && x.Distance(JadeHero) < (!HasMagicBullet ? ERange : ERange + (ERange * 10f / 100f)))
                 .OrderBy(x => x.Distance(JadeHero))
                 .FirstOrDefault();
 
             var isCastingOrChanneling = JadeHero.AbilitySystem.IsCasting || JadeHero.IsChanneling;
 
-            if (!isCastingOrChanneling && ComboMenu.GetBoolean("combo.useSpace") && MiscUtils.CanCast(AbilitySlot.Ability3) && JadeHero.EnemiesAround(2.5f) > 0)
+            if (!isCastingOrChanneling && ComboMenu.GetBoolean("combo.useSpace") && MiscUtils.CanCast(AbilitySlot.Ability3) && JadeHero.EnemiesAroundAlive(2.5f) > 0)
             {
                 if (!MiscUtils.HasBuff(JadeHero, "Stealth")) //Not stealthed
                 {
@@ -163,7 +216,7 @@ namespace PipJade
                 }
             }
 
-            if (!isCastingOrChanneling && ComboMenu.GetBoolean("combo.useQ.near") && MiscUtils.CanCast(AbilitySlot.Ability4) && JadeHero.EnemiesAround(2f) > 0)
+            if (!isCastingOrChanneling && ComboMenu.GetBoolean("combo.useQ.near") && MiscUtils.CanCast(AbilitySlot.Ability4) && JadeHero.EnemiesAroundAlive(2f) > 0)
             {
                 LocalPlayer.PressAbility(AbilitySlot.Ability4, true);
             }
@@ -181,62 +234,127 @@ namespace PipJade
                 switch (LastAbilityFired)
                 {
                     case AbilitySlot.Ability5: //E
-                        if (ETarget != null)
+                        if (ETarget != null && !ETarget.IsCountering)
                         {
-                            var pred = JadeHero.GetPrediction(ETarget, ESpeed, ERange, ERadius, SkillType.Line, FinalDelay, CollisionFlags.InvisWalls);
+                            if (ComboMenu.GetBoolean("combo.noBulwark") && ETarget.HasBuff("BulwarkBuff"))
+                            {
+                                LocalPlayer.PressAbility(AbilitySlot.Interrupt, true);
+                                break;
+                            }
+
+                            var pred = JadeHero.GetPrediction(ETarget, ESpeed, ERange, ERadius, SkillType.Line, FinalDelay, ColFlags);
 
                             if (pred.HitChancePercent >= 35f)
                             {
                                 LocalPlayer.Aim(pred.PredictedPosition);
                             }
                         }
+                        else
+                        {
+                            if (ComboMenu.GetBoolean("combo.interrupt"))
+                            {
+                                LocalPlayer.PressAbility(AbilitySlot.Interrupt, true);
+                            }
+                        }
                         break;
 
                     case AbilitySlot.Ability7: //F
-                        if (M2_FTarget != null)
+                        if (M2_FTarget != null && !M2_FTarget.IsCountering)
                         {
-                            var pred = JadeHero.GetPrediction(M2_FTarget, FSpeed, M2Range, FRadius, SkillType.Line, FinalDelay, CollisionFlags.InvisWalls);
+                            if (ComboMenu.GetBoolean("combo.noBulwark") && M2_FTarget.HasBuff("BulwarkBuff"))
+                            {
+                                LocalPlayer.PressAbility(AbilitySlot.Interrupt, true);
+                                break;
+                            }
+
+                            var pred = JadeHero.GetPrediction(M2_FTarget, FSpeed, M2Range, FRadius, SkillType.Line, FinalDelay, ColFlags);
 
                             if (pred.HitChancePercent >= 50f)
                             {
                                 LocalPlayer.Aim(pred.PredictedPosition);
                             }
                         }
+                        else
+                        {
+                            if (ComboMenu.GetBoolean("combo.interrupt"))
+                            {
+                                LocalPlayer.PressAbility(AbilitySlot.Interrupt, true);
+                            }
+                        }
                         break;
 
                     case AbilitySlot.Ability6: //R
-                        if (RTarget != null)
+                        if (RTarget != null && !RTarget.IsCountering)
                         {
-                            var pred = JadeHero.GetPrediction(RTarget, RSpeed, RRange, RRadius, SkillType.Line, FinalDelay, CollisionFlags.InvisWalls);
+                            if (ComboMenu.GetBoolean("combo.noBulwark") && RTarget.HasBuff("BulwarkBuff"))
+                            {
+                                LocalPlayer.PressAbility(AbilitySlot.Interrupt, true);
+                                break;
+                            }
+
+                            var pred = JadeHero.GetPrediction(RTarget, RSpeed, RRange, RRadius, SkillType.Line, FinalDelay, ColFlags);
 
                             if (pred.HitChancePercent >= 40f)
                             {
                                 LocalPlayer.Aim(pred.PredictedPosition);
                             }
                         }
+                        else
+                        {
+                            if (ComboMenu.GetBoolean("combo.interrupt"))
+                            {
+                                LocalPlayer.PressAbility(AbilitySlot.Interrupt, true);
+                            }
+                        }
                         break;
 
                     case AbilitySlot.Ability2: //M2
                     case AbilitySlot.EXAbility1:
-                        if (M2_FTarget != null)
+                        if (M2_FTarget != null && !M2_FTarget.IsCountering)
                         {
-                            var pred = JadeHero.GetPrediction(M2_FTarget, M2Speed, M2Range, M2Radius, SkillType.Line, FinalDelay, CollisionFlags.InvisWalls);
+                            if (ComboMenu.GetBoolean("combo.noBulwark") && M2_FTarget.HasBuff("BulwarkBuff"))
+                            {
+                                LocalPlayer.PressAbility(AbilitySlot.Interrupt, true);
+                                break;
+                            }
+
+                            var pred = JadeHero.GetPrediction(M2_FTarget, M2Speed, M2Range, M2Radius, SkillType.Line, FinalDelay, ColFlags);
 
                             if (pred.HitChancePercent >= 50f)
                             {
                                 LocalPlayer.Aim(pred.PredictedPosition);
                             }
                         }
+                        else
+                        {
+                            if (ComboMenu.GetBoolean("combo.interrupt"))
+                            {
+                                LocalPlayer.PressAbility(AbilitySlot.Interrupt, true);
+                            }
+                        }
                         break;
 
                     case AbilitySlot.Ability1: //M1
-                        if (M1Target != null)
+                        if (M1Target != null && !M1Target.IsCountering)
                         {
-                            var pred = JadeHero.GetPrediction(M1Target, M1Speed, M1Range, M1Radius, SkillType.Line, FinalDelay, CollisionFlags.InvisWalls /*| CollisionFlags.NPCBlocker*/);
+                            if (ComboMenu.GetBoolean("combo.noBulwark") && M1Target.HasBuff("BulwarkBuff"))
+                            {
+                                LocalPlayer.PressAbility(AbilitySlot.Interrupt, true);
+                                break;
+                            }
 
-                            if (pred.HitChancePercent >= 50f)
+                            var pred = JadeHero.GetPrediction(M1Target, M1Speed, M1Range, M1Radius, SkillType.Line, FinalDelay, ColFlags);
+
+                            if (pred.HitChancePercent >= 25f)
                             {
                                 LocalPlayer.Aim(pred.PredictedPosition);
+                            }
+                        }
+                        else
+                        {
+                            if (ComboMenu.GetBoolean("combo.interrupt"))
+                            {
+                                LocalPlayer.PressAbility(AbilitySlot.Interrupt, true);
                             }
                         }
                         break;
@@ -250,19 +368,32 @@ namespace PipJade
 
             if (ComboMenu.GetBoolean("combo.useE") && MiscUtils.CanCast(AbilitySlot.Ability5))
             {
-                if (LastAbilityFired == null && ETarget != null)
+                if (LastAbilityFired == null && ETarget != null && !ETarget.IsCountering && ((!ComboMenu.GetBoolean("combo.noBulwark")) || (ComboMenu.GetBoolean("combo.noBulwark") && !ETarget.HasBuff("BulwarkBuff"))))
                 {
-                    LocalPlayer.PressAbility(AbilitySlot.Ability5, true);
-                    LastAbilityFired = AbilitySlot.Ability5;
+                    var pred = JadeHero.GetPrediction(ETarget, ESpeed, ERange, ERadius, SkillType.Line, FinalDelay, ColFlags);
+
+                    if (pred.HitChancePercent >= 20f)
+                    {
+                        LocalPlayer.PressAbility(AbilitySlot.Ability5, true);
+                        LastAbilityFired = AbilitySlot.Ability5;
+                    }
                 }
             }
 
             if (ComboMenu.GetBoolean("combo.useF") && MiscUtils.CanCast(AbilitySlot.Ability7))
             {
-                if (LastAbilityFired == null && M2_FTarget != null)
+                if (JadeHero.EnemiesAroundAlive(ComboMenu.GetSlider("combo.useF.safeRange")) == 0)
                 {
-                    LocalPlayer.PressAbility(AbilitySlot.Ability7, true);
-                    LastAbilityFired = AbilitySlot.Ability7;
+                    if (LastAbilityFired == null && M2_FTarget != null && !M2_FTarget.IsCountering && ((!ComboMenu.GetBoolean("combo.noBulwark")) || (ComboMenu.GetBoolean("combo.noBulwark") && !M2_FTarget.HasBuff("BulwarkBuff"))))
+                    {
+                        var pred = JadeHero.GetPrediction(M2_FTarget, FSpeed, M2Range, FRadius, SkillType.Line, FinalDelay, ColFlags);
+
+                        if (pred.HitChancePercent >= 20f)
+                        {
+                            LocalPlayer.PressAbility(AbilitySlot.Ability7, true);
+                            LastAbilityFired = AbilitySlot.Ability7;
+                        }
+                    }
                 }
             }
 
@@ -271,22 +402,15 @@ namespace PipJade
                 var energyRequired = ComboMenu.GetIntSlider("combo.useR.minEnergyBars") * 25;
                 if (energyRequired <= JadeHero.Energized.Energy)
                 {
-                    if (LastAbilityFired == null && RTarget != null)
+                    if (LastAbilityFired == null && RTarget != null && !RTarget.IsCountering && ((!ComboMenu.GetBoolean("combo.noBulwark")) || (ComboMenu.GetBoolean("combo.noBulwark") && !RTarget.HasBuff("BulwarkBuff"))))
                     {
-                        LocalPlayer.PressAbility(AbilitySlot.Ability6, true);
-                        LastAbilityFired = AbilitySlot.Ability6;
-                    }
-                }
-            }
+                        var pred = JadeHero.GetPrediction(RTarget, RSpeed, RRange, RRadius, SkillType.Line, FinalDelay, ColFlags);
 
-            if (ComboMenu.GetBoolean("combo.useM2") && MiscUtils.CanCast(AbilitySlot.Ability2))
-            {
-                if (JadeHero.EnemiesAround(ComboMenu.GetSlider("combo.useM2.safeRange")) == 0)
-                {
-                    if (LastAbilityFired == null && M2_FTarget != null)
-                    {
-                        LocalPlayer.PressAbility(AbilitySlot.Ability2, true);
-                        LastAbilityFired = AbilitySlot.Ability2;
+                        if (pred.HitChancePercent >= 20f)
+                        {
+                            LocalPlayer.PressAbility(AbilitySlot.Ability6, true);
+                            LastAbilityFired = AbilitySlot.Ability6;
+                        }
                     }
                 }
             }
@@ -296,20 +420,47 @@ namespace PipJade
                 var energyRequired = ComboMenu.GetIntSlider("combo.useEX1.minEnergyBars") * 25;
                 if (energyRequired <= JadeHero.Energized.Energy)
                 {
-                    if (LastAbilityFired == null && M2_FTarget != null)
+                    if (LastAbilityFired == null && M2_FTarget != null && !M2_FTarget.IsCountering && ((!ComboMenu.GetBoolean("combo.noBulwark")) || (ComboMenu.GetBoolean("combo.noBulwark") && !M2_FTarget.HasBuff("BulwarkBuff"))))
                     {
-                        LocalPlayer.PressAbility(AbilitySlot.EXAbility1, true);
-                        LastAbilityFired = AbilitySlot.EXAbility1;
+                        var pred = JadeHero.GetPrediction(M2_FTarget, M2Speed, M2Range, M2Radius, SkillType.Line, FinalDelay, ColFlags);
+
+                        if (pred.HitChancePercent >= 20f)
+                        {
+                            LocalPlayer.PressAbility(AbilitySlot.EXAbility1, true);
+                            LastAbilityFired = AbilitySlot.EXAbility1;
+                        }
+                    }
+                }
+            }
+
+            if (ComboMenu.GetBoolean("combo.useM2") && MiscUtils.CanCast(AbilitySlot.Ability2))
+            {
+                if (JadeHero.EnemiesAroundAlive(ComboMenu.GetSlider("combo.useM2.safeRange")) == 0)
+                {
+                    if (LastAbilityFired == null && M2_FTarget != null && !M2_FTarget.IsCountering && ((!ComboMenu.GetBoolean("combo.noBulwark")) || (ComboMenu.GetBoolean("combo.noBulwark") && !M2_FTarget.HasBuff("BulwarkBuff"))))
+                    {
+                        var pred = JadeHero.GetPrediction(M2_FTarget, M2Speed, M2Range, M2Radius, SkillType.Line, FinalDelay, ColFlags);
+
+                        if (pred.HitChancePercent >= 20f)
+                        {
+                            LocalPlayer.PressAbility(AbilitySlot.Ability2, true);
+                            LastAbilityFired = AbilitySlot.Ability2;
+                        }
                     }
                 }
             }
 
             if (ComboMenu.GetBoolean("combo.useM1") && JadeHero.Blessings.Blessings > 0)
             {
-                if (LastAbilityFired == null && M1Target != null)
+                if (LastAbilityFired == null && M1Target != null && !M1Target.IsCountering && ((!ComboMenu.GetBoolean("combo.noBulwark")) || (ComboMenu.GetBoolean("combo.noBulwark") && !M1Target.HasBuff("BulwarkBuff"))))
                 {
-                    LocalPlayer.PressAbility(AbilitySlot.Ability1, true);
-                    LastAbilityFired = AbilitySlot.Ability1;
+                    var pred = JadeHero.GetPrediction(M1Target, M1Speed, M1Range, M1Radius, SkillType.Line, FinalDelay, ColFlags);
+
+                    if (pred.HitChancePercent >= 10f)
+                    {
+                        LocalPlayer.PressAbility(AbilitySlot.Ability1, true);
+                        LastAbilityFired = AbilitySlot.Ability1;
+                    }
                 }
             }
         }
@@ -320,22 +471,37 @@ namespace PipJade
 
             foreach (var enemy in possibleEnemies)
             {
-                if (KSMenu.GetBoolean("ks.useEX1") && LastAbilityFired == null && enemy.Living.Health <= 12f && enemy.Distance(JadeHero) < M2Range && MiscUtils.CanCast(AbilitySlot.EXAbility1)) //EX1
+                if (KSMenu.GetBoolean("ks.useEX1") && LastAbilityFired == null && enemy.Living.Health <= (!HasDeadlyFocus ? 12f : 12f + 5f) && enemy.Distance(JadeHero) < M2Range && MiscUtils.CanCast(AbilitySlot.EXAbility1)) //EX1
                 {
-                    LocalPlayer.PressAbility(AbilitySlot.EXAbility1, true);
-                    LastAbilityFired = AbilitySlot.EXAbility1;
+                    var pred = JadeHero.GetPrediction(enemy, M2Speed, M2Range, M2Radius, SkillType.Line, FinalDelay, ColFlags);
+
+                    if (pred.HitChancePercent >= 20f)
+                    {
+                        LocalPlayer.PressAbility(AbilitySlot.EXAbility1, true);
+                        LastAbilityFired = AbilitySlot.EXAbility1;
+                    }
                 }
 
                 if (KSMenu.GetBoolean("ks.useR") && LastAbilityFired == null && enemy.Living.Health <= 6f && enemy.Distance(JadeHero) < RRange && MiscUtils.CanCast(AbilitySlot.Ability6)) //R
                 {
-                    LocalPlayer.PressAbility(AbilitySlot.Ability6, true);
-                    LastAbilityFired = AbilitySlot.Ability6;
+                    var pred = JadeHero.GetPrediction(enemy, RSpeed, RRange, RRadius, SkillType.Line, FinalDelay, ColFlags);
+
+                    if (pred.HitChancePercent >= 20f)
+                    {
+                        LocalPlayer.PressAbility(AbilitySlot.Ability6, true);
+                        LastAbilityFired = AbilitySlot.Ability6;
+                    }
                 }
 
-                if (KSMenu.GetBoolean("ks.useR") && LastAbilityFired == null && enemy.Living.Health <= 6f * 3f && enemy.Distance(JadeHero) < 1.75f && MiscUtils.CanCast(AbilitySlot.Ability6)) //R
+                if (KSMenu.GetBoolean("ks.useR") && LastAbilityFired == null && enemy.Living.Health <= 6f * 3f && enemy.Distance(JadeHero) < 1.25f && MiscUtils.CanCast(AbilitySlot.Ability6)) //R
                 {
-                    LocalPlayer.PressAbility(AbilitySlot.Ability6, true);
-                    LastAbilityFired = AbilitySlot.Ability6;
+                    var pred = JadeHero.GetPrediction(enemy, RSpeed, RRange, RRadius, SkillType.Line, FinalDelay, ColFlags);
+
+                    if (pred.HitChancePercent >= 20f)
+                    {
+                        LocalPlayer.PressAbility(AbilitySlot.Ability6, true);
+                        LastAbilityFired = AbilitySlot.Ability6;
+                    }
                 }
             }
         }
@@ -356,11 +522,11 @@ namespace PipJade
 
             if (JadeHero.Distance(orbPos) <= M2Range)
             {
-                if (MiscUtils.CanCast(AbilitySlot.EXAbility1) && orbHealth <= 12f)
+                if (MiscUtils.CanCast(AbilitySlot.EXAbility1) && orbHealth <= (!HasDeadlyFocus ? 12f : 12f + 5f))
                 {
                     LocalPlayer.PressAbility(AbilitySlot.EXAbility1, true);
                 }
-                else if (MiscUtils.CanCast(AbilitySlot.Ability2) && orbHealth <= 38f)
+                else if (MiscUtils.CanCast(AbilitySlot.Ability2) && orbHealth > 6f * 4f && orbHealth <= (!HasDeadlyFocus ? 38f : 38f + 5f))
                 {
                     LocalPlayer.PressAbility(AbilitySlot.Ability2, true);
                 }
@@ -370,21 +536,19 @@ namespace PipJade
             {
                 if (JadeHero.Blessings.Blessings > 0)
                 {
-                    if (orb.EnemiesAround(6f) == 0)
+                    if (orb.EnemiesAroundAlive(6f) == 0)
                     {
                         LocalPlayer.PressAbility(AbilitySlot.Ability1, true);
                     }
                     else
                     {
-                        if (orbHealth <= 6 * 4 || orbHealth >= 6 * 4 + (6 * 4 / 2))
+                        if (orbHealth <= 6f * 4f || orbHealth >= 6f * 4f + (6f * 4f / 2f))
                         {
                             LocalPlayer.PressAbility(AbilitySlot.Ability1, true);
                         }
                     }
                 }
             }
-
-            //LocalPlayer.EditAimPosition = false;
         }
 
         private void OnDraw(EventArgs args)
@@ -399,7 +563,12 @@ namespace PipJade
                 return;
             }
 
-            Drawing.DrawString(new Vector2(1920f / 2f, 1080f / 2f - 5f).TempScreenToWorld(),
+            if (DrawingsMenu.GetBoolean("draw.disableAll"))
+            {
+                return;
+            }
+
+            Drawing.DrawString(new Vector2(1920f / 2f, 1080f / 2f - 5f).ScreenToWorld(),
                 "Targeting mode: " + (KeysMenu.GetKeybind("keys.changeTargeting") ? "LowestHealth" : "NearMouse"), UnityEngine.Color.yellow);
 
             if (DrawingsMenu.GetBoolean("draw.rangeM1"))
@@ -419,7 +588,12 @@ namespace PipJade
 
             if (DrawingsMenu.GetBoolean("draw.rangeSpace"))
             {
-                Drawing.DrawCircle(JadeHero.MapObject.Position, SpaceRange, UnityEngine.Color.green);
+                Drawing.DrawCircle(JadeHero.MapObject.Position, (!HasExplosiveJump ? SpaceRange : SpaceRange + (SpaceRange * 20f / 100f)), UnityEngine.Color.green);
+            }
+
+            if (DrawingsMenu.GetBoolean("draw.rangeE"))
+            {
+                Drawing.DrawCircle(JadeHero.MapObject.Position, (!HasMagicBullet ? ERange : ERange + (ERange * 10f / 100f)), UnityEngine.Color.red);
             }
 
             if (DrawingsMenu.GetBoolean("draw.rangeR"))
@@ -432,19 +606,24 @@ namespace PipJade
                 Drawing.DrawCircle(JadeHero.MapObject.Position, FRange, UnityEngine.Color.magenta);
             }
 
+            if (DrawingsMenu.GetBoolean("draw.rangeF.safeRange"))
+            {
+                Drawing.DrawCircle(JadeHero.MapObject.Position, ComboMenu.GetSlider("combo.useF.safeRange"), UnityEngine.Color.blue);
+            }
+
             if (DrawingsMenu.GetBoolean("draw.escapeSkillsScreen"))
             {
-                var drawSpacePos = new Vector2(760f, 1080f - 350f);
+                var drawSpacePos = new Vector2(760f, 350f);
                 var abilitySpace = LocalPlayer.GetAbilityHudData(AbilitySlot.Ability3);
                 var abilitySpaceReady = MiscUtils.CanCast(AbilitySlot.Ability3);
                 var textToDrawSpace = "Space state: " + (abilitySpaceReady ? "Ready" : Math.Round(abilitySpace.CooldownLeft, 2).ToString());
-                Drawing.DrawString(drawSpacePos.TempScreenToWorld(), textToDrawSpace, abilitySpaceReady ? UnityEngine.Color.cyan : UnityEngine.Color.gray);
+                Drawing.DrawString(drawSpacePos.ScreenToWorld(), textToDrawSpace, abilitySpaceReady ? UnityEngine.Color.cyan : UnityEngine.Color.gray);
 
-                var drawQPos = new Vector2(1920f - 760f, 1080f - 350f);
+                var drawQPos = new Vector2(1920f - 760f, 350f);
                 var abilityQ = LocalPlayer.GetAbilityHudData(AbilitySlot.Ability4);
                 var abilityQReady = MiscUtils.CanCast(AbilitySlot.Ability4);
                 var textToDrawQ = "Q state: " + (abilityQReady ? "Ready" : Math.Round(abilityQ.CooldownLeft, 2).ToString());
-                Drawing.DrawString(drawQPos.TempScreenToWorld(), textToDrawQ, abilityQReady ? UnityEngine.Color.cyan : UnityEngine.Color.gray);
+                Drawing.DrawString(drawQPos.ScreenToWorld(), textToDrawQ, abilityQReady ? UnityEngine.Color.cyan : UnityEngine.Color.gray);
             }
         }
     }

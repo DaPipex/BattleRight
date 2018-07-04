@@ -28,7 +28,7 @@ namespace PipLibrary.Utils
             return abilityHudData != null && abilityHudData.CooldownLeft <= 0 && abilityHudData.EnergyCost <= EntitiesManager.LocalPlayer.Energized.Energy;
         }
 
-        public static int EnemiesAround(this InGameObject gameObj, float distance)
+        public static int EnemiesAroundAlive(this InGameObject gameObj, float distance)
         {
             return EntitiesManager.EnemyTeam.Count(x => !x.Living.IsDead && x.Distance(gameObj.Get<MapGameObject>().Position) <= distance);
         }
@@ -50,6 +50,7 @@ namespace PipLibrary.Utils
             return player.Buffs.Any(x => x.ObjectName.Equals(buffName));
         }
 
+        [Obsolete]
         public static Vector2 TempScreenToWorld(this Vector2 screenPos)
         {
             var cam = UnityEngine.Camera.main;

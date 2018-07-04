@@ -53,7 +53,7 @@ namespace PipDeveloper
 
         public void OnInit()
         {
-            _devMenu = new Menu("pipdevelopermenu", "DaPip's Developer Helper");
+            _devMenu = new Menu("pipdevelopermenu", "DaPip's Dev Helper");
 
             _devMenu.AddLabel("Projectiles");
             _devMenu.Add(new MenuCheckBox("proj.name", "Last Projectile Name", false));
@@ -87,6 +87,7 @@ namespace PipDeveloper
             _devMenu.Add(new MenuCheckBox("misc.spellsNames", "My spells' names", false));
             _devMenu.Add(new MenuCheckBox("misc.healths", "My healths", false));
             _devMenu.Add(new MenuCheckBox("misc.buffNames", "My buff names", false));
+            _devMenu.Add(new MenuCheckBox("misc.battlerites", "My battlerites", false));
 
             _devMenu.AddSeparator(10f);
 
@@ -310,6 +311,28 @@ namespace PipDeveloper
 
                     _devMenu.SetBoolean("misc.spellsNames", false);
                 }
+            }
+
+            if (_devMenu.GetBoolean("misc.battlerites"))
+            {
+                const int MaxBattlerites = 5;
+                List<Battlerite> battlerites = new List<Battlerite>(MaxBattlerites);
+
+                for (var i = 0; i < MaxBattlerites; i++)
+                {
+                    var br = DevHero.BattleriteSystem.GetEquippedBattlerite(i);
+                    if (br != null)
+                    {
+                        battlerites.Add(br);
+                    }
+                }
+
+                foreach (var battlerite in battlerites)
+                {
+                    Console.WriteLine(battlerite.Name);
+                }
+
+                _devMenu.SetBoolean("misc.battlerites", false);
             }
 
             if (_devMenu.GetBoolean("misc.healths"))
