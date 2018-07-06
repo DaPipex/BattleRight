@@ -196,7 +196,7 @@ namespace PipLucie
             //var targetQ = EntitiesManager.EnemyTeam.Where(x => !x.IsDead && x.Buffs.Any(y => y.BuffType == BuffType.Buff) && x.Distance(LucieHero) <= QRange)
             //    .OrderBy(x => x.Distance(LucieHero))
             //    .FirstOrDefault();
-            var targetQ = TargetSelector.GetTarget(TargetingMode.NearLocalPlayer, 1.5f);
+            var targetQ = TargetSelector.GetTarget(TargetingMode.Closest, 1.5f);
             var targetE = TargetSelector.GetTarget(targetMode, ERange);
             var targetEX1 = TargetSelector.GetTarget(targetMode, EX1Range);
             var targetEX2 = TargetSelector.GetTarget(targetMode, EX2Range);

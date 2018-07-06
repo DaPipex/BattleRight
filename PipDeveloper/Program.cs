@@ -88,12 +88,18 @@ namespace PipDeveloper
             _devMenu.Add(new MenuCheckBox("misc.healths", "My healths", false));
             _devMenu.Add(new MenuCheckBox("misc.buffNames", "My buff names", false));
             _devMenu.Add(new MenuCheckBox("misc.battlerites", "My battlerites", false));
+            _devMenu.Add(new MenuCheckBox("misc.castingAbilityIndex", "Index of my ability being casted", true));
 
             _devMenu.AddSeparator(10f);
 
             _devMenu.AddLabel("Object create/destroy");
             _devMenu.Add(new MenuCheckBox("obj.create", "Print info of objects created", false));
             _devMenu.Add(new MenuCheckBox("obj.destroy", "Print info of objects destroyed", false));
+
+            _devMenu.AddSeparator(10f);
+            _devMenu.AddLabel("Buff gain/remove");
+            _devMenu.Add(new MenuCheckBox("buff.gain", "Print info on buff gain", false));
+            _devMenu.Add(new MenuCheckBox("buff.remove", "Print info on buff remove", false));
 
             _devMenu.AddSeparator(10f);
 
@@ -111,8 +117,8 @@ namespace PipDeveloper
             _devMenu.Add(new MenuSlider("debug.stw.ySlider", "Y", 540f, 1080f, 0f));
             //_devMenu.Add(new MenuCheckBox("debug.stw.cameraInfo", "Print camera info", false));
             _devMenu.Add(new MenuCheckBox("debug.stw.ray.useSliders", "Use X and Y Sliders instead of mouse pos", false));
-            _devMenu.Add(new MenuKeybind("debug.keybind", "Keybind Test", UnityEngine.KeyCode.T, false, false));
-            _devMenu.Add(new MenuKeybind("debug.keybind.toggle", "Toggle Keybind Test", UnityEngine.KeyCode.G, false, true));
+            //_devMenu.Add(new MenuKeybind("debug.keybind", "Keybind Test", UnityEngine.KeyCode.T, false, false));
+            //_devMenu.Add(new MenuKeybind("debug.keybind.toggle", "Toggle Keybind Test", UnityEngine.KeyCode.G, false, true));
 
             MainMenu.AddMenu(_devMenu);
 
@@ -120,6 +126,24 @@ namespace PipDeveloper
             Game.OnDraw += OnDraw;
             InGameObject.OnCreate += OnCreate;
             InGameObject.OnDestroy += OnDestroy;
+            //BuffDetector.OnGainBuff += OnGainBuff;
+            //BuffDetector.OnRemoveBuff += OnRemoveBuff;
+        }
+
+        private static void OnGainBuff(Character player, Buff buff)
+        {
+            if (_devMenu.GetBoolean("buff.gain"))
+            {
+                Logs.Info(String.Format("Character {0} of team {1}, gained buff of name {2}", player.CharName, Enum.GetName(typeof(Team), player.Team), buff.ObjectName));
+            }
+        }
+
+        private static void OnRemoveBuff(Character player, Buff buff)
+        {
+            if (_devMenu.GetBoolean("buff.remove"))
+            {
+                Logs.Info(String.Format("Character {0} of team {1}, lost buff of name {2}", player.CharName, Enum.GetName(typeof(Team), player.Team), buff.ObjectName));
+            }
         }
 
         private static void PrintAbilityInfo(AbilitySlot slot)
@@ -335,6 +359,11 @@ namespace PipDeveloper
                 _devMenu.SetBoolean("misc.battlerites", false);
             }
 
+            if (_devMenu.GetBoolean("misc.castingAbilityIndex") && DevHero.AbilitySystem.IsCasting)
+            {
+                Console.WriteLine(DevHero.AbilitySystem.CastingAbilityName + " - " + DevHero.AbilitySystem.CastingAbilityIndex);
+            }
+
             if (_devMenu.GetBoolean("misc.healths"))
             {
                 Console.WriteLine("Health: " + DevHero.Living.Health);
@@ -426,15 +455,15 @@ namespace PipDeveloper
                 }
             }
 
-            if (_devMenu.Get<MenuKeybind>("debug.keybind").CurrentValue)
-            {
-                Drawing.DrawCircle(DevHero.MapObject.Position, 2f, UnityEngine.Color.yellow);
-            }
+            //if (_devMenu.Get<MenuKeybind>("debug.keybind").CurrentValue)
+            //{
+            //    Drawing.DrawCircle(DevHero.MapObject.Position, 2f, UnityEngine.Color.yellow);
+            //}
 
-            if (_devMenu.Get<MenuKeybind>("debug.keybind.toggle").CurrentValue)
-            {
-                Drawing.DrawCircle(DevHero.MapObject.Position, 3f, UnityEngine.Color.magenta);
-            }
+            //if (_devMenu.Get<MenuKeybind>("debug.keybind.toggle").CurrentValue)
+            //{
+            //    Drawing.DrawCircle(DevHero.MapObject.Position, 3f, UnityEngine.Color.magenta);
+            //}
         }
     }
 }

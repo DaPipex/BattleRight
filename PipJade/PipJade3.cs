@@ -35,7 +35,7 @@ namespace PipJade
 
         private static readonly List<Battlerite> Battlerites = new List<Battlerite>(5);
 
-        private const CollisionFlags ColFlags = CollisionFlags.InvisWalls | CollisionFlags.HighBlock | CollisionFlags.LowBlock;
+        private const CollisionFlags ColFlags = CollisionFlags.Bush | CollisionFlags.NPCBlocker;
 
         private const float M1Speed = 17f;
         private const float M2Speed = 28.5f;
@@ -227,6 +227,8 @@ namespace PipJade
                 LocalPlayer.PressAbility(AbilitySlot.Ability4, true);
             }
 
+            //var castingAbility = CastingIndexToSlot(JadeHero.AbilitySystem.CastingAbilityIndex);
+
             if (isCastingOrChanneling)
             {
                 LocalPlayer.EditAimPosition = true;
@@ -244,6 +246,12 @@ namespace PipJade
 
                             var pred = JadeHero.GetPrediction(ETarget, ESpeed, ERange, ERadius, SkillType.Line, FinalDelay, ColFlags);
 
+                            if (pred.CollisionResult.IsColliding)
+                            {
+                                LocalPlayer.PressAbility(AbilitySlot.Interrupt, true);
+                                break;
+                            }
+
                             if (pred.HitChancePercent >= 35f)
                             {
                                 LocalPlayer.Aim(pred.PredictedPosition);
@@ -259,7 +267,7 @@ namespace PipJade
                         break;
 
                     case AbilitySlot.Ability7: //F
-                        if (M2_FTarget != null && !M2_FTarget.IsCountering)
+                        if (M2_FTarget != null /*&& !M2_FTarget.IsCountering*/)
                         {
                             if (ComboMenu.GetBoolean("combo.noBulwark") && M2_FTarget.HasBuff("BulwarkBuff"))
                             {
@@ -268,6 +276,12 @@ namespace PipJade
                             }
 
                             var pred = JadeHero.GetPrediction(M2_FTarget, FSpeed, M2Range, FRadius, SkillType.Line, FinalDelay, ColFlags);
+
+                            if (/*pred.CollisionResult.IsColliding*/false)
+                            {
+                                LocalPlayer.PressAbility(AbilitySlot.Interrupt, true);
+                                break;
+                            }
 
                             if (pred.HitChancePercent >= 50f)
                             {
@@ -293,6 +307,12 @@ namespace PipJade
                             }
 
                             var pred = JadeHero.GetPrediction(RTarget, RSpeed, RRange, RRadius, SkillType.Line, FinalDelay, ColFlags);
+
+                            if (pred.CollisionResult.IsColliding)
+                            {
+                                LocalPlayer.PressAbility(AbilitySlot.Interrupt, true);
+                                break;
+                            }
 
                             if (pred.HitChancePercent >= 40f)
                             {
@@ -320,6 +340,12 @@ namespace PipJade
 
                             var pred = JadeHero.GetPrediction(M2_FTarget, M2Speed, M2Range, M2Radius, SkillType.Line, FinalDelay, ColFlags);
 
+                            if (pred.CollisionResult.IsColliding)
+                            {
+                                LocalPlayer.PressAbility(AbilitySlot.Interrupt, true);
+                                break;
+                            }
+
                             if (pred.HitChancePercent >= 50f)
                             {
                                 LocalPlayer.Aim(pred.PredictedPosition);
@@ -344,6 +370,12 @@ namespace PipJade
                             }
 
                             var pred = JadeHero.GetPrediction(M1Target, M1Speed, M1Range, M1Radius, SkillType.Line, FinalDelay, ColFlags);
+
+                            if (pred.CollisionResult.IsColliding)
+                            {
+                                LocalPlayer.PressAbility(AbilitySlot.Interrupt, true);
+                                break;
+                            }
 
                             if (pred.HitChancePercent >= 25f)
                             {
@@ -469,6 +501,8 @@ namespace PipJade
         {
             var possibleEnemies = EntitiesManager.EnemyTeam.Where(x => x.IsValid && !x.Living.IsDead && !x.IsCountering && !x.PhysicsCollision.IsImmaterial);
 
+            //var castingAbility = CastingIndexToSlot(JadeHero.AbilitySystem.CastingAbilityIndex);
+
             foreach (var enemy in possibleEnemies)
             {
                 if (KSMenu.GetBoolean("ks.useEX1") && LastAbilityFired == null && enemy.Living.Health <= (!HasDeadlyFocus ? 12f : 12f + 5f) && enemy.Distance(JadeHero) < M2Range && MiscUtils.CanCast(AbilitySlot.EXAbility1)) //EX1
@@ -568,8 +602,11 @@ namespace PipJade
                 return;
             }
 
-            Drawing.DrawString(new Vector2(1920f / 2f, 1080f / 2f - 5f).ScreenToWorld(),
-                "Targeting mode: " + (KeysMenu.GetKeybind("keys.changeTargeting") ? "LowestHealth" : "NearMouse"), UnityEngine.Color.yellow);
+            Drawing.DrawString(new Vector2(1920f / 2f, 1080f / 2f - 5f),
+                "Targeting mode: " + (KeysMenu.GetKeybind("keys.changeTargeting") ? "LowestHealth" : "NearMouse"), UnityEngine.Color.yellow, ViewSpace.ScreenSpacePixels);
+
+            //Drawing.DrawString(new Vector2(1920f / 2f, 1080f / 2f + 100f).ScreenToWorld(),
+            //    "Being casted: " + (CastingIndexToSlot(JadeHero.AbilitySystem.CastingAbilityIndex) == null ? "None" : Enum.GetName(typeof(AbilitySlot), CastingIndexToSlot(JadeHero.AbilitySystem.CastingAbilityIndex).Value)), UnityEngine.Color.magenta);
 
             if (DrawingsMenu.GetBoolean("draw.rangeM1"))
             {
@@ -613,18 +650,54 @@ namespace PipJade
 
             if (DrawingsMenu.GetBoolean("draw.escapeSkillsScreen"))
             {
-                var drawSpacePos = new Vector2(760f, 350f);
                 var abilitySpace = LocalPlayer.GetAbilityHudData(AbilitySlot.Ability3);
-                var abilitySpaceReady = MiscUtils.CanCast(AbilitySlot.Ability3);
-                var textToDrawSpace = "Space state: " + (abilitySpaceReady ? "Ready" : Math.Round(abilitySpace.CooldownLeft, 2).ToString());
-                Drawing.DrawString(drawSpacePos.ScreenToWorld(), textToDrawSpace, abilitySpaceReady ? UnityEngine.Color.cyan : UnityEngine.Color.gray);
+                if (abilitySpace != null)
+                {
+                    var drawSpacePos = new Vector2(760f, 1080f - 350f);
+                    var abilitySpaceReady = MiscUtils.CanCast(AbilitySlot.Ability3);
+                    var textToDrawSpace = "Space state: " + (abilitySpaceReady ? "Ready" : Math.Round(abilitySpace.CooldownLeft, 2).ToString());
+                    Drawing.DrawString(drawSpacePos, textToDrawSpace, abilitySpaceReady ? UnityEngine.Color.cyan : UnityEngine.Color.gray, ViewSpace.ScreenSpacePixels);
+                }
 
-                var drawQPos = new Vector2(1920f - 760f, 350f);
                 var abilityQ = LocalPlayer.GetAbilityHudData(AbilitySlot.Ability4);
-                var abilityQReady = MiscUtils.CanCast(AbilitySlot.Ability4);
-                var textToDrawQ = "Q state: " + (abilityQReady ? "Ready" : Math.Round(abilityQ.CooldownLeft, 2).ToString());
-                Drawing.DrawString(drawQPos.ScreenToWorld(), textToDrawQ, abilityQReady ? UnityEngine.Color.cyan : UnityEngine.Color.gray);
+                if (abilityQ != null)
+                {
+                    var drawQPos = new Vector2(1920f - 760f, 1080f - 350f);
+                    var abilityQReady = MiscUtils.CanCast(AbilitySlot.Ability4);
+                    var textToDrawQ = "Q state: " + (abilityQReady ? "Ready" : Math.Round(abilityQ.CooldownLeft, 2).ToString());
+                    Drawing.DrawString(drawQPos, textToDrawQ, abilityQReady ? UnityEngine.Color.cyan : UnityEngine.Color.gray, ViewSpace.ScreenSpacePixels);
+                }
             }
+        }
+
+        private static AbilitySlot? CastingIndexToSlot(int index)
+        {
+            switch (index)
+            {
+                case 0:
+                case 1:
+                    return AbilitySlot.Ability1;
+                case 2:
+                    return AbilitySlot.Ability4;
+                case 3:
+                    return AbilitySlot.Ability2;
+                case 4:
+                    return AbilitySlot.EXAbility1;
+                case 5:
+                    return AbilitySlot.EXAbility2;
+                case 6:
+                    return AbilitySlot.Ability3;
+                case 7:
+                    return AbilitySlot.Ability5;
+                case 8:
+                    return AbilitySlot.Ability6;
+                case 9:
+                    return AbilitySlot.Ability7;
+                case 11:
+                    return AbilitySlot.Mount;
+            }
+
+            return null;
         }
     }
 }
