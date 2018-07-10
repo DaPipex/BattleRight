@@ -47,7 +47,7 @@ namespace TestPrediction2NS
 
         public static TestOutput GetNormalLinePrediction(Vector2 fromPos, InGameObject targetUnit, float range, float speed, float radius = 0f, bool checkCollision = false)
         {
-            return GetPrediction(fromPos, targetUnit, range, speed, radius, 0f, 2f, checkCollision, CollisionFlags.NPCBlocker | CollisionFlags.Bush);
+            return GetPrediction(fromPos, targetUnit, range, speed, radius, 0f, 1.75f, checkCollision, CollisionFlags.NPCBlocker | CollisionFlags.Bush);
         }
 
         /// <summary>
@@ -66,7 +66,7 @@ namespace TestPrediction2NS
         public static TestOutput GetPrediction(Vector2 fromPos, InGameObject targetUnit, float range, float speed,
             float radius = 0f,
             float fixedDelay = 0f,
-            float maxEnemyReactionTime = 2f,
+            float maxEnemyReactionTime = 1.75f,
             bool checkCollision = false,
             CollisionFlags ignoreFlags = CollisionFlags.Bush | CollisionFlags.NPCBlocker)
         {
@@ -99,54 +99,81 @@ namespace TestPrediction2NS
             }
 
             var targetVelocity = networkMovementObject.Velocity;
-
-            var predPos = fixedDelay < float.Epsilon ? GetStandardPrediction(fromPos, targetPos, speed, targetVelocity) : GetFixedDelayPrediction(targetPos, fixedDelay, targetVelocity);
-            if (predPos == Vector2.Zero)
-            {
-                return new TestOutput()
-                {
-                    CanHit = false,
-                    Hitchance = TestHitchance.Impossible,
-                    CastPosition = Vector2.Zero,
-                };
-            }
-
-
-            TestOutput solution = new TestOutput()
-            {
-                CanHit = true,
-                CastPosition = predPos,
-            };
-
             var targetRadius = targetUnit.Get<SpellCollisionObject>().SpellCollisionRadius; //TODO: Check if MapCollisionRadius is better
-            var targetCollision = CollisionSolver.CheckThickLineCollision(targetPos, predPos, targetRadius);
-            if (targetCollision != null && targetCollision.IsColliding)
-            {
-                solution.CastPosition = targetCollision.CollisionPoint;
-            }
 
-            if (solution.CastPosition.Distance(fromPos) > range)
+            if (fixedDelay < float.Epsilon) //No fixed delay
             {
-                solution.CanHit = false;
-                solution.Hitchance = TestHitchance.OutOfRange;
-            }
+                var predPos = GetStandardPrediction(fromPos, targetPos, speed, targetVelocity);
+                if (predPos == Vector2.Zero)
+                {
+                    return new TestOutput()
+                    {
+                        CanHit = false,
+                        Hitchance = TestHitchance.Impossible,
+                        CastPosition = Vector2.Zero,
+                    };
+                }
 
-            if (checkCollision)
-            {
-                solution.CollisionResult = CollisionSolver.CheckThickLineCollision(fromPos, solution.CastPosition, radius < float.Epsilon ? 0.01f : radius, ignoreFlags);
 
-                if (solution.CollisionResult.IsColliding)
+                TestOutput solution = new TestOutput()
+                {
+                    CanHit = true,
+                    CastPosition = predPos,
+                };
+
+                var targetCollision = CollisionSolver.CheckThickLineCollision(targetPos, solution.CastPosition, targetRadius);
+                if (targetCollision != null && targetCollision.IsColliding)
+                {
+                    solution.CastPosition = targetCollision.CollisionPoint;
+                }
+
+                if (solution.CastPosition.Distance(fromPos) > range)
                 {
                     solution.CanHit = false;
-                    solution.Hitchance = TestHitchance.Collision;
+                    solution.Hitchance = TestHitchance.OutOfRange;
                 }
-            }
 
-            var useDelayInsteadOfSpeed = fixedDelay > float.Epsilon;
-            var speedOrDelay = useDelayInsteadOfSpeed ? fixedDelay : speed;
-            solution.HitchancePercentage = GetHitchance(fromPos, solution.CastPosition, speedOrDelay, maxEnemyReactionTime, useDelayInsteadOfSpeed);
-            solution.Hitchance = GetHitchanceEnum(solution.HitchancePercentage);
-            return solution;
+                if (checkCollision)
+                {
+                    solution.CollisionResult = CollisionSolver.CheckThickLineCollision(fromPos, solution.CastPosition, radius < float.Epsilon ? 0.01f : radius, ignoreFlags);
+
+                    if (solution.CollisionResult.IsColliding)
+                    {
+                        solution.CanHit = false;
+                        solution.Hitchance = TestHitchance.Collision;
+                    }
+                }
+
+                solution.HitchancePercentage = GetHitchance(fromPos, solution.CastPosition, speed, maxEnemyReactionTime, false);
+                solution.Hitchance = GetHitchanceEnum(solution.HitchancePercentage);
+                return solution;
+            }
+            else //WITH fixed delay
+            {
+                var predPos = GetFixedDelayPrediction(targetPos, fixedDelay, targetVelocity);
+
+                TestOutput solution = new TestOutput()
+                {
+                    CanHit = true,
+                    CastPosition = predPos,
+                };
+
+                var targetCollision = CollisionSolver.CheckThickLineCollision(targetPos, solution.CastPosition, targetRadius);
+                if (targetCollision != null && targetCollision.IsColliding)
+                {
+                    solution.CastPosition = targetCollision.CollisionPoint;
+                }
+
+                if (solution.CastPosition.Distance(fromPos) > range)
+                {
+                    solution.CanHit = false;
+                    solution.Hitchance = TestHitchance.OutOfRange;
+                }
+
+                solution.HitchancePercentage = GetHitchance(fromPos, solution.CastPosition, fixedDelay, maxEnemyReactionTime, true);
+                solution.Hitchance = GetHitchanceEnum(solution.HitchancePercentage);
+                return solution;
+            }
         }
 
         private static Vector2 GetStandardPrediction(Vector2 pos1, Vector2 pos2, float speed1, Vector2 vel2)
@@ -201,16 +228,7 @@ namespace TestPrediction2NS
             return sol;
         }
 
-        private static TestHitchance GetHitchanceEnum(float hitchance)
-        {
-            return hitchance > VeryLowHC && hitchance < LowHC ? TestHitchance.VeryLow :
-                hitchance >= LowHC && hitchance < MediumHC ? TestHitchance.Low :
-                hitchance >= MediumHC && hitchance < HighHC ? TestHitchance.Medium :
-                hitchance >= HighHC && hitchance < VeryHighHC ? TestHitchance.High :
-                hitchance >= VeryHighHC ? TestHitchance.VeryHigh : TestHitchance.VeryLow;
-        }
-
-        private static float GetHitchance(Vector2 fromPos, Vector2 predPos, float variable, float maxEnemyReactionTime = 2f, bool delayInsteadOfSpeed = false)
+        private static float GetHitchance(Vector2 fromPos, Vector2 predPos, float variable, float maxEnemyReactionTime = 1.75f, bool delayInsteadOfSpeed = false)
         {
             float time = 0f;
             if (!delayInsteadOfSpeed)
@@ -231,6 +249,15 @@ namespace TestPrediction2NS
             hitchance = Math.Max(0f, hitchance);
             hitchance = Math.Min(100f, hitchance);
             return hitchance;
+        }
+
+        private static TestHitchance GetHitchanceEnum(float hitchance)
+        {
+            return hitchance > VeryLowHC && hitchance < LowHC ? TestHitchance.VeryLow :
+                hitchance >= LowHC && hitchance < MediumHC ? TestHitchance.Low :
+                hitchance >= MediumHC && hitchance < HighHC ? TestHitchance.Medium :
+                hitchance >= HighHC && hitchance < VeryHighHC ? TestHitchance.High :
+                hitchance >= VeryHighHC ? TestHitchance.VeryHigh : TestHitchance.VeryLow;
         }
 
         private static Vector2 GetFixedDelayPrediction(Vector2 targetPos, float fixedDelay, Vector2 targetVelocity)
