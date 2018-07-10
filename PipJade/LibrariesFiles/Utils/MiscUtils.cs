@@ -45,6 +45,11 @@ namespace PipLibrary.Utils
             return false;
         }
 
+        public static bool HasShield(this Character player)
+        {
+            return player.HasBuff("BulwarkBuff") || player.HasBuff("DivineShieldBuff");
+        }
+
         public static bool HasBuff(this Character player, string buffName)
         {
             return player.Buffs.Any(x => x.ObjectName.Equals(buffName));
