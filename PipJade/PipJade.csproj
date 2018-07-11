@@ -61,8 +61,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="LibrariesFiles\Extensions\MenuExtensions.cs" />
-    <Compile Include="LibrariesFiles\TestPrediction.cs" />
-    <Compile Include="LibrariesFiles\TestPrediction2.cs" />
+    <Compile Include="LibrariesFiles\Prediction\TestPrediction.cs" />
+    <Compile Include="LibrariesFiles\Prediction\TestPrediction2.cs" />
     <Compile Include="LibrariesFiles\Utils\MathUtils.cs" />
     <Compile Include="LibrariesFiles\Utils\MiscUtils.cs" />
     <Compile Include="PipJade2.cs" />

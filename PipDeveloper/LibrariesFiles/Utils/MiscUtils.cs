@@ -6,6 +6,7 @@ using System.Text;
 using BattleRight.Core;
 using BattleRight.Core.Enumeration;
 using BattleRight.Core.GameObjects;
+using BattleRight.Core.GameObjects.Models;
 using BattleRight.Core.Math;
 using BattleRight.Core.Models;
 
@@ -16,7 +17,7 @@ using BattleRight.SDK.UI;
 using BattleRight.SDK.UI.Models;
 using BattleRight.SDK.UI.Values;
 
-namespace PipZander.Utils
+namespace PipLibrary.Utils
 {
     public static class MiscUtils
     {
@@ -24,15 +25,15 @@ namespace PipZander.Utils
         {
             var abilityHudData = LocalPlayer.GetAbilityHudData(slot);
 
-            return abilityHudData != null && abilityHudData.CooldownTime <= 0 && abilityHudData.EnergyCost <= EntitiesManager.LocalPlayer.Energy;
+            return abilityHudData != null && abilityHudData.CooldownLeft <= 0 && abilityHudData.EnergyCost <= EntitiesManager.LocalPlayer.Energized.Energy;
         }
 
-        public static int EnemiesAround(ActiveGameObject gameObj, float distance)
+        public static int EnemiesAroundAlive(this InGameObject gameObj, float distance)
         {
-            return EntitiesManager.EnemyTeam.Count(x => !x.IsDead && x.Distance(gameObj) <= distance);
+            return EntitiesManager.EnemyTeam.Count(x => !x.Living.IsDead && x.Distance(gameObj.Get<MapGameObject>().Position) <= distance);
         }
 
-        public static bool HasBuff(this Player player, string buffName, out Buff buff)
+        public static bool HasBuff(this Character player, string buffName, out Buff buff)
         {
             if (player.Buffs.Any(x => x.ObjectName.Equals(buffName)))
             {
@@ -44,12 +45,23 @@ namespace PipZander.Utils
             return false;
         }
 
-        public static bool HasBuff(this Player player, string buffName)
+        public static bool HasShield(this Character player)
+        {
+            return player.HasBuff("BulwarkBuff") || player.HasBuff("DivineShieldBuff");
+        }
+
+        public static bool HasHardCC(this Character player)
+        {
+            return player.HasCCOfType(CCType.Stun) || player.HasCCOfType(CCType.Snared) || player.HasCCOfType(CCType.Root);
+        }
+
+        public static bool HasBuff(this Character player, string buffName)
         {
             return player.Buffs.Any(x => x.ObjectName.Equals(buffName));
         }
 
-        public static Vector2 ScreenToWorld(this Vector2 screenPos)
+        [Obsolete]
+        public static Vector2 TempScreenToWorld(this Vector2 screenPos)
         {
             var cam = UnityEngine.Camera.main;
             var ray = cam.ScreenPointToRay(new UnityEngine.Vector3(screenPos.X, screenPos.Y));

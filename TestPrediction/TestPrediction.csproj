@@ -4,15 +4,15 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{2E5EF3A6-B571-4285-AF78-3F26770E9040}</ProjectGuid>
+    <ProjectGuid>{82F86492-E4EB-4A32-A7E3-553B5555C213}</ProjectGuid>
     <OutputType>Library</OutputType>
-    <RootNamespace>PipZander</RootNamespace>
-    <AssemblyName>PipZander</AssemblyName>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>TestPrediction</RootNamespace>
+    <AssemblyName>TestPrediction</AssemblyName>
     <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
@@ -22,16 +22,12 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>bin\Release\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-  </PropertyGroup>
-  <PropertyGroup>
-    <StartupObject />
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="BattleRight.Core">
@@ -40,8 +36,7 @@
     <Reference Include="BattleRight.Helper">
       <HintPath>..\..\..\..\Downloads\BR\Release\System\BattleRight.Helper.dll</HintPath>
     </Reference>
-    <Reference Include="BattleRight.Sandbox, Version=1.0.0.0, Culture=neutral, PublicKeyToken=17d7f475c70d8a09, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
+    <Reference Include="BattleRight.Sandbox">
       <HintPath>..\..\..\..\Downloads\BR\Release\System\BattleRight.Sandbox.dll</HintPath>
     </Reference>
     <Reference Include="BattleRight.SDK">
@@ -53,8 +48,7 @@
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
-    <Reference Include="UnityEngine, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
+    <Reference Include="UnityEngine">
       <HintPath>..\..\..\..\Downloads\BR\Release\System\UnityEngine.dll</HintPath>
     </Reference>
   </ItemGroup>
@@ -64,9 +58,8 @@
     <Compile Include="LibrariesFiles\Prediction\TestPrediction2.cs" />
     <Compile Include="LibrariesFiles\Utils\MathUtils.cs" />
     <Compile Include="LibrariesFiles\Utils\MiscUtils.cs" />
-    <Compile Include="PipZander.cs" />
-    <Compile Include="PipZander2.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="TestMain.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

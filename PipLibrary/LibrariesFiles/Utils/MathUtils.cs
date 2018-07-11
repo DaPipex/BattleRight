@@ -16,7 +16,7 @@ using BattleRight.SDK.UI;
 using BattleRight.SDK.UI.Models;
 using BattleRight.SDK.UI.Values;
 
-namespace PipZander.Utils
+namespace PipLibrary.Utils
 {
     public static class MathUtils
     {

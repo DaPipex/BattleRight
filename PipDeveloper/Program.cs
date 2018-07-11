@@ -18,7 +18,6 @@ using BattleRight.SDK.UI;
 using BattleRight.SDK.UI.Models;
 using BattleRight.SDK.UI.Values;
 
-using PipDeveloper.Extensions;
 using PipLibrary.Extensions;
 
 namespace PipDeveloper

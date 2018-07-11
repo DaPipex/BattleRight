@@ -47,10 +47,12 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Extensions\MenuExtensions.cs" />
+    <Compile Include="LibrariesFiles\Extensions\MenuExtensions.cs" />
+    <Compile Include="LibrariesFiles\Prediction\TestPrediction.cs" />
+    <Compile Include="LibrariesFiles\Prediction\TestPrediction2.cs" />
+    <Compile Include="LibrariesFiles\Utils\MathUtils.cs" />
+    <Compile Include="LibrariesFiles\Utils\MiscUtils.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Utils\MathUtils.cs" />
-    <Compile Include="Utils\MiscUtils.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

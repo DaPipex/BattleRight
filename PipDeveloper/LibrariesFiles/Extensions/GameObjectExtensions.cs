@@ -5,7 +5,7 @@ using System.Text;
 
 using BattleRight.Core.GameObjects;
 
-namespace PipDeveloper.Extensions
+namespace PipLibrary.Extensions
 {
     public static class GameObjectExtensions
     {
