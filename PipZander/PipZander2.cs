@@ -72,6 +72,7 @@ namespace PipZander
             InitMenu();
 
             Game.OnMatchStart += args => NullClones();
+            Game.OnMatchEnd += args => NullClones();
             Game.OnMatchStateUpdate += OnMatchStateUpdate;
             Game.OnUpdate += OnUpdate;
             Game.OnDraw += OnDraw;
@@ -149,7 +150,10 @@ namespace PipZander
 
         private void OnMatchStateUpdate(MatchStateUpdate args)
         {
-
+            if (args.NewMatchState == MatchState.PreRound)
+            {
+                NullClones();
+            }
         }
 
         private void OnUpdate(EventArgs args)
@@ -168,7 +172,7 @@ namespace PipZander
 
             //CheckClones();
 
-            LocalPlayer.EditAimPosition = false;
+            //LocalPlayer.EditAimPosition = false;
 
             if (KeysMenu.GetKeybind("keys.healOthers"))
             {
@@ -182,21 +186,29 @@ namespace PipZander
             {
                 ComboMode();
             }
+            else
+            {
+                LocalPlayer.EditAimPosition = false;
+                LastAbilityFired = null;
+            }
         }
 
         private static void HealOthers()
         {
             var possibleAllies = EntitiesManager.LocalTeam.Where(x => !x.IsLocalPlayer && !x.Living.IsDead);
 
-            var allyToHealM1 = possibleAllies.Where(x => x.Distance(ZanderHero) < M1Range)
-                .OrderBy(x => x.Living.Health)
-                .FirstOrDefault(x => x.Living.Health < x.Living.MaxRecoveryHealth);
+            //var allyToHealM1 = possibleAllies.Where(x => x.Distance(ZanderHero) < M1Range)
+            //    .OrderBy(x => x.Living.Health)
+            //    .FirstOrDefault(x => x.Living.Health < x.Living.MaxRecoveryHealth);
 
             var allyToHealEX1 = possibleAllies.Where(x => x.Distance(ZanderHero) < EX1Range)
                 .OrderBy(x => x.Living.Health)
                 .FirstOrDefault(x => x.HasHardCC() && x.EnemiesAroundAlive(5f) > 0);
 
-            var nearMouseAlly = TargetSelector.GetAlly(TargetingMode.NearMouse, M1Range);
+            var nearMouseAllyZander = TargetSelector.GetAlly(TargetingMode.NearMouse, M1Range);
+            var nearMouseAllySpace = SpaceClone == null ? null : TargetSelector.GetAlly(TargetingMode.NearMouse, M1Range, SpaceClone.Get<MapGameObject>().Position);
+            var nearMouseAllyEX2 = EX2Clone == null ? null : TargetSelector.GetAlly(TargetingMode.NearMouse, M1Range, EX2Clone.Get<MapGameObject>().Position);
+            var nearMouseAllyUlti = UltiClone == null ? null : TargetSelector.GetAlly(TargetingMode.NearMouse, M1Range, UltiClone.Get<MapGameObject>().Position);
 
             var isCastingOrChanneling = ZanderHero.AbilitySystem.IsCasting || ZanderHero.IsChanneling;
 
@@ -213,9 +225,9 @@ namespace PipZander
                 switch (LastAbilityFired)
                 {
                     case AbilitySlot.Ability1:
-                        if (allyToHealM1 != null)
+                        if (nearMouseAllyZander != null)
                         {
-                            var pred = TestPrediction.GetNormalLinePrediction(myPos, allyToHealM1, M1Range, M1Speed, M1Radius, true);
+                            var pred = TestPrediction.GetNormalLinePrediction(myPos, nearMouseAllyZander, M1Range, M1Speed, M1Radius, true);
                             if (pred.CanHit)
                             {
                                 LocalPlayer.Aim(pred.CastPosition);
@@ -225,9 +237,33 @@ namespace PipZander
                                 LocalPlayer.PressAbility(AbilitySlot.Interrupt, true);
                             }
                         }
-                        else if (allyToHealM1 == null && nearMouseAlly != null)
+                        else if (nearMouseAllyUlti != null)
                         {
-                            var pred = TestPrediction.GetNormalLinePrediction(myPos, nearMouseAlly, M1Range, M1Speed, M1Radius, true);
+                            var pred = TestPrediction.GetNormalLinePrediction(UltiClone.Get<MapGameObject>().Position, nearMouseAllyUlti, M1Range, M1Speed, M1Radius, true);
+                            if (pred.CanHit)
+                            {
+                                LocalPlayer.Aim(pred.CastPosition);
+                            }
+                            else
+                            {
+                                LocalPlayer.PressAbility(AbilitySlot.Interrupt, true);
+                            }
+                        }
+                        else if (nearMouseAllySpace != null)
+                        {
+                            var pred = TestPrediction.GetNormalLinePrediction(SpaceClone.Get<MapGameObject>().Position, nearMouseAllySpace, M1Range, M1Speed, M1Radius, true);
+                            if (pred.CanHit)
+                            {
+                                LocalPlayer.Aim(pred.CastPosition);
+                            }
+                            else
+                            {
+                                LocalPlayer.PressAbility(AbilitySlot.Interrupt, true);
+                            }
+                        }
+                        else if (nearMouseAllyEX2 != null)
+                        {
+                            var pred = TestPrediction.GetNormalLinePrediction(EX2Clone.Get<MapGameObject>().Position, nearMouseAllyEX2, M1Range, M1Speed, M1Radius, true);
                             if (pred.CanHit)
                             {
                                 LocalPlayer.Aim(pred.CastPosition);
@@ -271,20 +307,39 @@ namespace PipZander
 
             if (HealMenu.GetBoolean("heal.useM1") && MiscUtils.CanCast(AbilitySlot.Ability1))
             {
-                if (LastAbilityFired == null && allyToHealM1 != null)
+                if (LastAbilityFired == null)
                 {
-                    var pred = TestPrediction.GetNormalLinePrediction(myPos, allyToHealM1, M1Range, M1Speed, M1Radius, true);
-                    if (pred.CanHit)
+                    if (nearMouseAllyUlti != null)
                     {
-                        LocalPlayer.PressAbility(AbilitySlot.Ability1, true);
+                        var pred = TestPrediction.GetNormalLinePrediction(UltiClone.Get<MapGameObject>().Position, nearMouseAllyUlti, M1Range, M1Speed, M1Radius, true);
+                        if (pred.CanHit)
+                        {
+                            LocalPlayer.PressAbility(AbilitySlot.Ability1, true);
+                        }
                     }
-                }
-                else if (LastAbilityFired == null && allyToHealM1 == null && nearMouseAlly != null)
-                {
-                    var pred = TestPrediction.GetNormalLinePrediction(myPos, nearMouseAlly, M1Range, M1Speed, M1Radius, true);
-                    if (pred.CanHit)
+                    else if (nearMouseAllyZander != null)
                     {
-                        LocalPlayer.PressAbility(AbilitySlot.Ability1, true);
+                        var pred = TestPrediction.GetNormalLinePrediction(myPos, nearMouseAllyZander, M1Range, M1Speed, M1Radius, true);
+                        if (pred.CanHit)
+                        {
+                            LocalPlayer.PressAbility(AbilitySlot.Ability1, true);
+                        }
+                    }
+                    else if (nearMouseAllySpace != null)
+                    {
+                        var pred = TestPrediction.GetNormalLinePrediction(SpaceClone.Get<MapGameObject>().Position, nearMouseAllySpace, M1Range, M1Speed, M1Radius, true);
+                        if (pred.CanHit)
+                        {
+                            LocalPlayer.PressAbility(AbilitySlot.Ability1, true);
+                        }
+                    }
+                    else if (nearMouseAllyEX2 != null)
+                    {
+                        var pred = TestPrediction.GetNormalLinePrediction(EX2Clone.Get<MapGameObject>().Position, nearMouseAllyEX2, M1Range, M1Speed, M1Radius, true);
+                        if (pred.CanHit)
+                        {
+                            LocalPlayer.PressAbility(AbilitySlot.Ability1, true);
+                        }
                     }
                 }
             }
@@ -401,7 +456,7 @@ namespace PipZander
                         if (M2TargetZander != null && !M2TargetZander.IsCountering && !M2TargetZander.HasShield())
                         {
                             var pred = TestPrediction.GetNormalLinePrediction(myPos, M2TargetZander, M2Range, M2Speed, M2Radius, true);
-                            if (pred.CollisionResult.IsColliding)
+                            if (pred.CollisionResult.IsColliding && UltiClone == null)
                             {
                                 LocalPlayer.PressAbility(AbilitySlot.Interrupt, true);
                             }
@@ -417,10 +472,6 @@ namespace PipZander
                             {
                                 LocalPlayer.Aim(pred.CastPosition);
                             }
-                        }
-                        else if (UltiClone == null) //If clone is null then allow us to interrupt
-                        {
-                            LocalPlayer.PressAbility(AbilitySlot.Interrupt, true);
                         }
                         break;
 
@@ -476,6 +527,15 @@ namespace PipZander
                     {
                         IsQRecast = true;
                         LocalPlayer.PressAbility(AbilitySlot.Ability4, true);
+                        LocalPlayer.EditAimPosition = true;
+                        if (M2TargetZander != null)
+                        {
+                            LocalPlayer.Aim(M2TargetZander.MapObject.Position);
+                        }
+                        else
+                        {
+                            LocalPlayer.Aim(ZanderHero.MapObject.Position);
+                        }
                     }
                     else if (ZanderHero.HasBuff("PortalRecastBuff", out portalBuff))
                     {
@@ -483,6 +543,15 @@ namespace PipZander
                         {
                             IsQRecast = true;
                             LocalPlayer.PressAbility(AbilitySlot.Ability4, true);
+                            LocalPlayer.EditAimPosition = true;
+                            if (M2TargetZander != null)
+                            {
+                                LocalPlayer.Aim(M2TargetZander.MapObject.Position);
+                            }
+                            else
+                            {
+                                LocalPlayer.Aim(ZanderHero.MapObject.Position);
+                            }
                         }
                     }
                 }
@@ -492,6 +561,8 @@ namespace PipZander
                     {
                         IsQRecast = false;
                         LocalPlayer.PressAbility(AbilitySlot.Ability4, true);
+                        LocalPlayer.EditAimPosition = true;
+                        LocalPlayer.Aim(UltiClone.Get<MapGameObject>().Position);
                     }
                 }
             }
