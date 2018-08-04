@@ -58,8 +58,6 @@ namespace PipJade
         private const float RRadius = 0.3f; //Not precise, need to take cone's shape into consideration
         private const float FRadius = 0.4f;
 
-        private static float FinalDelay;
-
         private static bool HasDeadlyFocus;
         private static bool HasExplosiveJump;
         private static bool HasMagicBullet;
@@ -67,7 +65,6 @@ namespace PipJade
         public void OnInit()
         {
             JadeMenu = new Menu("pipjademenu", "DaPip's Jade");
-            JadeMenu.Add(new MenuCheckBox("main.includePing", "Include ping in prediction?", false));
 
             KeysMenu = new Menu("keysmenu", "Keys", true);
             KeysMenu.Add(new MenuKeybind("keys.combo", "Combo Key", UnityEngine.KeyCode.LeftControl));
@@ -124,6 +121,8 @@ namespace PipJade
 
         private void OnMatchStateUpdate(MatchStateUpdate args)
         {
+            JadeHero = EntitiesManager.LocalPlayer;
+
             if (JadeHero.CharName != "Gunner")
             {
                 return;
@@ -159,19 +158,12 @@ namespace PipJade
 
         private void OnUpdate(EventArgs args)
         {
-            if (!Game.IsInGame)
-            {
-                return;
-            }
-
             JadeHero = EntitiesManager.LocalPlayer;
 
             if (JadeHero.CharName != "Gunner")
             {
                 return;
             }
-
-            FinalDelay = JadeMenu.GetBoolean("main.includePing") ? JadeHero.AbilitySystem.Latency / 2000f : 0f;
 
             HasDeadlyFocus = Battlerites.Any(x => x.Name == "DeadlyFocusUpgrade");
             HasExplosiveJump = Battlerites.Any(x => x.Name == "ExplosiveJumpUpgrade");
