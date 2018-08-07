@@ -305,10 +305,10 @@ namespace PipDeveloper
                 {
                     Console.WriteLine(obj.ObjectName);
 
-                    foreach (var basetype in obj.GetBaseTypes())
-                    {
-                        Console.WriteLine("Basetype: " + basetype);
-                    }
+                    //foreach (var basetype in obj.GetBaseTypes())
+                    //{
+                    //    Console.WriteLine("Basetype: " + basetype);
+                    //}
                 }
 
                 _devMenu.SetBoolean("go.allNames", false);
