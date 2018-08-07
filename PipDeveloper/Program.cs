@@ -95,27 +95,29 @@ namespace PipDeveloper
             _devMenu.Add(new MenuCheckBox("obj.create", "Print info of objects created", false));
             _devMenu.Add(new MenuCheckBox("obj.destroy", "Print info of objects destroyed", false));
 
-            _devMenu.AddSeparator(10f);
-            _devMenu.AddLabel("Buff gain/remove");
-            _devMenu.Add(new MenuCheckBox("buff.gain", "Print info on buff gain", false));
-            _devMenu.Add(new MenuCheckBox("buff.remove", "Print info on buff remove", false));
+            //_devMenu.AddSeparator(10f);
+
+            //_devMenu.AddLabel("Buff gain/remove");
+            //_devMenu.Add(new MenuCheckBox("buff.gain", "Print info on buff gain", false));
+            //_devMenu.Add(new MenuCheckBox("buff.remove", "Print info on buff remove", false));
 
             _devMenu.AddSeparator(10f);
 
             _devMenu.AddLabel("Drawings");
             _devMenu.Add(new MenuCheckBox("draw.customCircle", "Draw custom circle", true));
+            _devMenu.Add(new MenuCheckBox("draw.customCircle.mousePos", "Draw custom circle at mouse position", false));
             _devMenu.Add(new MenuSlider("draw.customCircle.range", "    ^ Range", 9.5f, 10f, 0f));
             _devMenu.Add(new MenuCheckBox("draw.customCircle.increase", "    ^ Increase by 0.1", false));
             _devMenu.Add(new MenuCheckBox("draw.customCircle.decrease", "    ^ Decrease by 0.1", false));
 
-            _devMenu.AddSeparator(10f);
+            //_devMenu.AddSeparator(10f);
 
-            _devMenu.AddLabel("Special Debug");
-            _devMenu.Add(new MenuCheckBox("debug.stw", "Screen to World Test", false));
-            _devMenu.Add(new MenuSlider("debug.stw.xSlider", "X", 960f, 1920f, 0f));
-            _devMenu.Add(new MenuSlider("debug.stw.ySlider", "Y", 540f, 1080f, 0f));
+            //_devMenu.AddLabel("Special Debug");
+            //_devMenu.Add(new MenuCheckBox("debug.stw", "Screen to World Test", false));
+            //_devMenu.Add(new MenuSlider("debug.stw.xSlider", "X", 960f, 1920f, 0f));
+            //_devMenu.Add(new MenuSlider("debug.stw.ySlider", "Y", 540f, 1080f, 0f));
             //_devMenu.Add(new MenuCheckBox("debug.stw.cameraInfo", "Print camera info", false));
-            _devMenu.Add(new MenuCheckBox("debug.stw.ray.useSliders", "Use X and Y Sliders instead of mouse pos", false));
+            //_devMenu.Add(new MenuCheckBox("debug.stw.ray.useSliders", "Use X and Y Sliders instead of mouse pos", false));
             //_devMenu.Add(new MenuKeybind("debug.keybind", "Keybind Test", UnityEngine.KeyCode.T, false, false));
             //_devMenu.Add(new MenuKeybind("debug.keybind.toggle", "Toggle Keybind Test", UnityEngine.KeyCode.G, false, true));
 
@@ -432,27 +434,33 @@ namespace PipDeveloper
                 Drawing.DrawCircle(DevHero.MapObject.Position, range, UnityEngine.Color.green);
             }
 
-            if (_devMenu.GetBoolean("debug.stw"))
+            if (_devMenu.GetBoolean("draw.customCircle.mousePos"))
             {
-                UnityEngine.Camera cam = UnityEngine.Camera.main;
-
-                var sliderX = _devMenu.GetSlider("debug.stw.xSlider");
-                var sliderY = _devMenu.GetSlider("debug.stw.ySlider");
-
-                var useSliders = _devMenu.GetBoolean("debug.stw.ray.useSliders");
-                UnityEngine.Ray ray = cam.ScreenPointToRay(useSliders ? new UnityEngine.Vector3(sliderX, sliderY) : UnityEngine.Input.mousePosition);
-                UnityEngine.Plane plane = new UnityEngine.Plane(UnityEngine.Vector3.up, UnityEngine.Vector3.zero);
-
-                float d;
-
-                if (plane.Raycast(ray, out d))
-                {
-                    var drawPos = new Vector2(ray.GetPoint(d).x, ray.GetPoint(d).z);
-
-                    Drawing.DrawCircle(drawPos, 2.5f, UnityEngine.Color.red);
-                    Drawing.DrawString(drawPos, "C", UnityEngine.Color.cyan);
-                }
+                var range = _devMenu.GetSlider("draw.customCircle.range");
+                Drawing.DrawCircle(InputManager.MousePosition.ScreenToWorld(), range, UnityEngine.Color.cyan);
             }
+
+            //if (_devMenu.GetBoolean("debug.stw"))
+            //{
+            //    UnityEngine.Camera cam = UnityEngine.Camera.main;
+
+            //    var sliderX = _devMenu.GetSlider("debug.stw.xSlider");
+            //    var sliderY = _devMenu.GetSlider("debug.stw.ySlider");
+
+            //    var useSliders = _devMenu.GetBoolean("debug.stw.ray.useSliders");
+            //    UnityEngine.Ray ray = cam.ScreenPointToRay(useSliders ? new UnityEngine.Vector3(sliderX, sliderY) : UnityEngine.Input.mousePosition);
+            //    UnityEngine.Plane plane = new UnityEngine.Plane(UnityEngine.Vector3.up, UnityEngine.Vector3.zero);
+
+            //    float d;
+
+            //    if (plane.Raycast(ray, out d))
+            //    {
+            //        var drawPos = new Vector2(ray.GetPoint(d).x, ray.GetPoint(d).z);
+
+            //        Drawing.DrawCircle(drawPos, 2.5f, UnityEngine.Color.red);
+            //        Drawing.DrawString(drawPos, "C", UnityEngine.Color.cyan);
+            //    }
+            //}
 
             //if (_devMenu.Get<MenuKeybind>("debug.keybind").CurrentValue)
             //{
