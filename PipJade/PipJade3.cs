@@ -75,6 +75,7 @@ namespace PipJade
             ComboMenu = new Menu("combomenu", "Combo", true);
             ComboMenu.Add(new MenuCheckBox("combo.interrupt", "Interrupt casting when target lost or enters countering", true));
             ComboMenu.Add(new MenuCheckBox("combo.noShield", "Don't shoot/Cancel shot if target has Bakko/Ulric shield", true));
+            ComboMenu.Add(new MenuCheckBox("combo.invisibleTargets", "Aim at invisible targets", true));
             ComboMenu.Add(new MenuCheckBox("combo.useM1", "Use Left Mouse (Revolver Shot)", true));
             ComboMenu.Add(new MenuCheckBox("combo.useM2", "Use Right Mouse (Snipe) when in safe range", true));
             ComboMenu.Add(new MenuSlider("combo.useM2.safeRange", "    ^ Safe range", 7f, M2Range - 1f, 0f));
@@ -93,6 +94,7 @@ namespace PipJade
 
             KSMenu = new Menu("ksmenu", "Killsteal", true);
             KSMenu.AddLabel("Combo Key must be held for these to work");
+            KSMenu.Add(new MenuCheckBox("ks.invisibleTargets", "Killsteal invisible targets", true));
             KSMenu.Add(new MenuCheckBox("ks.useEX1", "Killsteal with EX1", true));
             KSMenu.Add(new MenuCheckBox("ks.useR", "Killsteal with R", true));
             JadeMenu.Add(KSMenu);
@@ -190,10 +192,14 @@ namespace PipJade
             var targetModeKey = KeysMenu.GetKeybind("keys.changeTargeting");
             var targetMode = targetModeKey ? TargetingMode.LowestHealth : TargetingMode.NearMouse;
 
-            var M1Target = TargetSelector.GetTarget(targetMode, M1Range);
-            var M2_FTarget = TargetSelector.GetTarget(targetMode, M2Range);
-            var RTarget = TargetSelector.GetTarget(targetMode, !ComboMenu.GetBoolean("combo.useR.closeRange") ? RRange : RRange / 2f);
-            var ETarget = EntitiesManager.EnemyTeam
+            var invisibleTargets = ComboMenu.GetBoolean("combo.invisibleTargets");
+
+            var enemiesToTarget = invisibleTargets ? EntitiesManager.EnemyTeam : EntitiesManager.EnemyTeam.Where(x => !x.CharacterModel.IsModelInvisible);
+
+            var M1Target = TargetSelector.GetTarget(enemiesToTarget, targetMode, M1Range);
+            var M2_FTarget = TargetSelector.GetTarget(enemiesToTarget, targetMode, M2Range);
+            var RTarget = TargetSelector.GetTarget(enemiesToTarget, targetMode, !ComboMenu.GetBoolean("combo.useR.closeRange") ? RRange : RRange / 2f);
+            var ETarget = enemiesToTarget
                 .Where(x => x.IsValid && !x.Living.IsDead && (x.AbilitySystem.IsCasting || x.IsChanneling) && !x.IsCountering && x.Distance(JadeHero) < (!HasMagicBullet ? ERange : ERange + (ERange * 10f / 100f)))
                 .OrderBy(x => x.Distance(JadeHero))
                 .FirstOrDefault();
@@ -467,7 +473,10 @@ namespace PipJade
 
         private static void KillstealMode()
         {
-            var possibleEnemies = EntitiesManager.EnemyTeam.Where(x => x.IsValid && !x.Living.IsDead && !x.IsCountering && !x.PhysicsCollision.IsImmaterial);
+            var invisibleEnemies = KSMenu.GetBoolean("ks.invisibleTargets");
+
+            var possibleEnemies = invisibleEnemies ? EntitiesManager.EnemyTeam : EntitiesManager.EnemyTeam.Where(x => !x.CharacterModel.IsModelInvisible);
+            possibleEnemies = possibleEnemies.Where(x => x.IsValid && !x.Living.IsDead && !x.IsCountering && !x.PhysicsCollision.IsImmaterial);
 
             //var castingAbility = CastingIndexToSlot(JadeHero.AbilitySystem.CastingAbilityIndex);
             var myPos = JadeHero.MapObject.Position;
