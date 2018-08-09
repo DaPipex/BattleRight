@@ -33,6 +33,12 @@ namespace PipLibrary.Utils
             return EntitiesManager.EnemyTeam.Count(x => !x.Living.IsDead && x.Distance(gameObj.Get<MapGameObject>().Position) <= distance);
         }
 
+
+        public static int EnemiesAroundAlive(this Vector2 position, float distance)
+        {
+            return EntitiesManager.EnemyTeam.Count(x => !x.Living.IsDead && x.Distance(position) <= distance);
+        }
+
         public static bool HasBuff(this Character player, string buffName, out Buff buff)
         {
             if (player.Buffs.Any(x => x.ObjectName.Equals(buffName)))
@@ -48,6 +54,11 @@ namespace PipLibrary.Utils
         public static bool HasShield(this Character player)
         {
             return player.HasBuff("BulwarkBuff") || player.HasBuff("DivineShieldBuff");
+        }
+
+        public static bool HasHardCC(this Character player)
+        {
+            return player.HasCCOfType(CCType.Stun) || player.HasCCOfType(CCType.Snared) || player.HasCCOfType(CCType.Root);
         }
 
         public static bool HasBuff(this Character player, string buffName)

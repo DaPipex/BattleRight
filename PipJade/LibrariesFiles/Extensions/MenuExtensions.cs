@@ -109,6 +109,20 @@ namespace PipLibrary.Extensions
             }
         }
 
+        public static int GetComboBox(this Menu menu, string menuItem)
+        {
+            var item = menu.Get<MenuComboBox>(menuItem);
+
+            if (item == null)
+            {
+                throw new Exception("GetComboBox: menuItem '" + menuItem + "' doesn't exist in " + menu.Name);
+            }
+            else
+            {
+                return item.CurrentValue;
+            }
+        }
+
         public static Menu GetSubmenu(this Menu menu, string submenuName)
         {
             var submenu = menu.Get<Menu>(submenuName);
