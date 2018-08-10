@@ -90,6 +90,8 @@ namespace PipJade
             ComboMenu.Add(new MenuCheckBox("combo.useR.closeRange", "    ^ Only use at close range", true));
             ComboMenu.Add(new MenuCheckBox("combo.useEX1", "Use EX1 (Snap Shot)", false));
             ComboMenu.Add(new MenuIntSlider("combo.useEX1.minEnergyBars", "    ^ Min energy bars", 2, 4, 1));
+            ComboMenu.Add(new MenuCheckBox("combo.useEX2", "Use EX2 (Smoke Veil) instead of normal Q (Stealth)", false));
+            ComboMenu.Add(new MenuIntSlider("combo.useEX2.minEnergyBars", "    ^ When min energy bars", 3, 4, 1));
             ComboMenu.Add(new MenuCheckBox("combo.useF", "Use F (Explosive Shells)", true));
             ComboMenu.Add(new MenuSlider("combo.useF.safeRange", "    ^ Safe range", 3f, M2Range - 1f, 0f));
             JadeMenu.Add(ComboMenu);
@@ -214,15 +216,30 @@ namespace PipJade
                 LastAbilityFired = CastingIndexToSlot(JadeHero.AbilitySystem.CastingAbilityIndex);
             }
 
+            var useEX2 = ComboMenu.GetBoolean("combo.useEX2") && (ComboMenu.GetIntSlider("combo.useEX2.minEnergyBars") * 25 <= JadeHero.Energized.Energy);
             if (!isCastingOrChanneling && ComboMenu.GetBoolean("combo.useQ.near") && MiscUtils.CanCast(AbilitySlot.Ability4) && JadeHero.EnemiesAroundAlive(2f) > 0)
             {
-                LocalPlayer.PressAbility(AbilitySlot.Ability4, true);
+                if (!useEX2)
+                {
+                    LocalPlayer.PressAbility(AbilitySlot.Ability4, true);
+                }
+                else
+                {
+                    LocalPlayer.PressAbility(AbilitySlot.EXAbility2, true);
+                }
             }
 
             if (!isCastingOrChanneling && ComboMenu.GetBoolean("combo.useQ.reset") && MiscUtils.CanCast(AbilitySlot.Ability4) 
                 && LocalPlayer.GetAbilityHudData(AbilitySlot.Ability2).CooldownLeft > 0f)
             {
-                LocalPlayer.PressAbility(AbilitySlot.Ability4, true);
+                if (!useEX2)
+                {
+                    LocalPlayer.PressAbility(AbilitySlot.Ability4, true);
+                }
+                else
+                {
+                    LocalPlayer.PressAbility(AbilitySlot.EXAbility2, true);
+                }
             }
 
             //var castingAbility = CastingIndexToSlot(JadeHero.AbilitySystem.CastingAbilityIndex);
