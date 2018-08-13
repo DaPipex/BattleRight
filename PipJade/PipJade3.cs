@@ -37,6 +37,15 @@ namespace PipJade
 
         private static readonly List<Battlerite> Battlerites = new List<Battlerite>(5);
 
+        private static readonly List<SpecialEnemyCircleObject> SpecialCircleObjects = new List<SpecialEnemyCircleObject>()
+        {
+            new SpecialEnemyCircleObject("BubbleBarrierArea", 2f, false), //Big bubble - Pearl
+            new SpecialEnemyCircleObject("OceanSageWaterBarrierArea", 1.5f, false), //Small bubble - Pearl
+            new SpecialEnemyCircleObject("UnstableBubbleArea", 2f, false), //EX2 Bubble - Pearl
+            new SpecialEnemyCircleObject("ChronofluxArea", 2f, false), //Chronoflux - Oldur
+            new SpecialEnemyCircleObject("ChronofluxAreaLesser", 1.1f, false), //Chronoflux Lesser - Oldur
+        };
+
         private const CollisionFlags ColFlags = CollisionFlags.Bush | CollisionFlags.NPCBlocker;
 
         private const float M1Speed = 17f;
@@ -75,11 +84,13 @@ namespace PipJade
             ComboMenu = new Menu("combomenu", "Combo", true);
             ComboMenu.Add(new MenuCheckBox("combo.interrupt", "Interrupt casting when target lost or enters countering", true));
             ComboMenu.Add(new MenuCheckBox("combo.noShield", "Don't shoot/Cancel shot if target has Bakko/Ulric shield", true));
+            ComboMenu.Add(new MenuCheckBox("combo.noBubble", "Don't shoot/Cancel shot if will go through a bubble (Pearl/Oldur)", true));
             ComboMenu.Add(new MenuCheckBox("combo.invisibleTargets", "Aim at invisible targets", true));
             ComboMenu.Add(new MenuCheckBox("combo.useM1", "Use Left Mouse (Revolver Shot)", true));
             ComboMenu.Add(new MenuCheckBox("combo.useM2", "Use Right Mouse (Snipe) when in safe range", true));
             ComboMenu.Add(new MenuSlider("combo.useM2.safeRange", "    ^ Safe range", 7f, M2Range - 1f, 0f));
             ComboMenu.Add(new MenuCheckBox("combo.useSpace", "Use Space (Blast Vault) when enemies are too close", true));
+            ComboMenu.Add(new MenuSlider("combo.useSpace.maxRange", "    ^ Safe range", 2.5f, 3f, 0.1f));
             ComboMenu.Add(new MenuComboBox("combo.useSpace.direction", "    ^ Direction", 0, new string[] { "Safe teammate closest to edge", "Mouse Position" }));
             ComboMenu.Add(new MenuIntSlider("combo.useSpace.accuracy", "    ^ Accuracy (Higher number = Slower)", 32, 64, 1));
             ComboMenu.Add(new MenuCheckBox("combo.useQ.reset", "Use Q (Stealth) if M2 (Snipe) is on cooldown", false));
@@ -110,6 +121,7 @@ namespace PipJade
             DrawingsMenu.Add(new MenuCheckBox("draw.rangeM2", "Draw Right Mouse Range (Snipe)", true));
             DrawingsMenu.Add(new MenuCheckBox("draw.rangeM2.safeRange", "Draw Right Mouse Safe-Range (Snipe)", false));
             DrawingsMenu.Add(new MenuCheckBox("draw.rangeSpace", "Draw Space Range (Blast Vault)", true));
+            DrawingsMenu.Add(new MenuCheckBox("draw.rangeSpace.safeRange", "Draw Space Safe-Range (Blast Vault)", false));
             DrawingsMenu.Add(new MenuCheckBox("draw.rangeE", "Draw E Range (Disabling Shot)", false));
             DrawingsMenu.Add(new MenuCheckBox("draw.rangeR", "Draw R Range (Junk Shot)", true));
             DrawingsMenu.Add(new MenuCheckBox("draw.rangeF", "Draw F Range (Explosive Shells)", false));
@@ -121,16 +133,78 @@ namespace PipJade
 
             MainMenu.AddMenu(JadeMenu);
 
+            InGameObject.OnCreate += OnCreate;
+            InGameObject.OnDestroy += OnDestroy;
+            Game.OnMatchStart += args =>
+            {
+                foreach (var obj in SpecialCircleObjects)
+                {
+                    obj.Active = false;
+                }
+            };
+            Game.OnMatchEnd += args =>
+            {
+                foreach (var obj in SpecialCircleObjects)
+                {
+                    obj.Active = false;
+                }
+            };
             Game.OnUpdate += OnUpdate;
             Game.OnDraw += OnDraw;
             Game.OnMatchStateUpdate += OnMatchStateUpdate;
         }
 
-        private void OnMatchStateUpdate(MatchStateUpdate args)
+        private void OnCreate(InGameObject gameObject)
         {
-            JadeHero = EntitiesManager.LocalPlayer;
+            if (!Game.IsInGame)
+            {
+                return;
+            }
 
             if (JadeHero.CharName != "Gunner")
+            {
+                return;
+            }
+
+            var baseObject = gameObject.Get<BaseGameObject>();
+            if (baseObject != null && baseObject.TeamId != JadeHero.BaseObject.TeamId)
+            {
+                var matchedSpecial = SpecialCircleObjects.FirstOrDefault(x => x.Name.Equals(gameObject.ObjectName));
+                if (matchedSpecial != null)
+                {
+                    matchedSpecial.Active = true;
+                    matchedSpecial.Position = gameObject.Get<MapGameObject>().Position;
+                }
+            }
+        }
+
+        private void OnDestroy(InGameObject gameObject)
+        {
+            if (!Game.IsInGame)
+            {
+                return;
+            }
+
+            if (JadeHero.CharName != "Gunner")
+            {
+                return;
+            }
+
+            var baseObject = gameObject.Get<BaseGameObject>();
+            if (baseObject != null && baseObject.TeamId != JadeHero.BaseObject.TeamId)
+            {
+                var matchedSpecial = SpecialCircleObjects.FirstOrDefault(x => x.Name.Equals(gameObject.ObjectName));
+                if (matchedSpecial != null)
+                {
+                    matchedSpecial.Active = false;
+                    matchedSpecial.Position = Vector2.Zero;
+                }
+            }
+        }
+
+        private void OnMatchStateUpdate(MatchStateUpdate args)
+        {
+            if (EntitiesManager.LocalPlayer.CharName != "Gunner")
             {
                 return;
             }
@@ -138,6 +212,14 @@ namespace PipJade
             if (args.OldMatchState == MatchState.BattleritePicking && args.NewMatchState != MatchState.BattleritePicking)
             {
                 GetBattlerites();
+            }
+
+            if (args.NewMatchState == MatchState.PreRound)
+            {
+                foreach (var obj in SpecialCircleObjects)
+                {
+                    obj.Active = false;
+                }
             }
         }
 
@@ -229,7 +311,7 @@ namespace PipJade
                 }
             }
 
-            if (!isCastingOrChanneling && ComboMenu.GetBoolean("combo.useQ.reset") && MiscUtils.CanCast(AbilitySlot.Ability4) 
+            if (!isCastingOrChanneling && ComboMenu.GetBoolean("combo.useQ.reset") && MiscUtils.CanCast(AbilitySlot.Ability4)
                 && LocalPlayer.GetAbilityHudData(AbilitySlot.Ability2).CooldownLeft > 0f)
             {
                 if (!useEX2)
@@ -277,7 +359,14 @@ namespace PipJade
 
                             if (testPred.CanHit)
                             {
-                                LocalPlayer.Aim(testPred.CastPosition);
+                                if (ComboMenu.GetBoolean("combo.noBubble") && WillCollideWithEnemyBubble(myPos, testPred.CastPosition, ERadius))
+                                {
+                                    LocalPlayer.PressAbility(AbilitySlot.Interrupt, true);
+                                }
+                                else
+                                {
+                                    LocalPlayer.Aim(testPred.CastPosition);
+                                }
                             }
                         }
                         else
@@ -327,7 +416,14 @@ namespace PipJade
 
                             if (testPred.CanHit)
                             {
-                                LocalPlayer.Aim(testPred.CastPosition);
+                                if (ComboMenu.GetBoolean("combo.noBubble") && WillCollideWithEnemyBubble(myPos, testPred.CastPosition, RRadius))
+                                {
+                                    LocalPlayer.PressAbility(AbilitySlot.Interrupt, true);
+                                }
+                                else
+                                {
+                                    LocalPlayer.Aim(testPred.CastPosition);
+                                }
                             }
                         }
                         else
@@ -353,7 +449,14 @@ namespace PipJade
 
                             if (testPred.CanHit)
                             {
-                                LocalPlayer.Aim(testPred.CastPosition);
+                                if (ComboMenu.GetBoolean("combo.noBubble") && WillCollideWithEnemyBubble(myPos, testPred.CastPosition, M2Radius))
+                                {
+                                    LocalPlayer.PressAbility(AbilitySlot.Interrupt, true);
+                                }
+                                else
+                                {
+                                    LocalPlayer.Aim(testPred.CastPosition);
+                                }
                             }
                         }
                         else
@@ -378,7 +481,14 @@ namespace PipJade
 
                             if (testPred.CanHit)
                             {
-                                LocalPlayer.Aim(testPred.CastPosition);
+                                if (ComboMenu.GetBoolean("combo.noBubble") && WillCollideWithEnemyBubble(myPos, testPred.CastPosition, M1Radius))
+                                {
+                                    LocalPlayer.PressAbility(AbilitySlot.Interrupt, true);
+                                }
+                                else
+                                {
+                                    LocalPlayer.Aim(testPred.CastPosition);
+                                }
                             }
                         }
                         else
@@ -397,7 +507,7 @@ namespace PipJade
                 LocalPlayer.EditAimPosition = false;
             }
 
-            if (!isCastingOrChanneling && ComboMenu.GetBoolean("combo.useSpace") && MiscUtils.CanCast(AbilitySlot.Ability3) && JadeHero.EnemiesAroundAlive(2.5f) > 0)
+            if (!isCastingOrChanneling && ComboMenu.GetBoolean("combo.useSpace") && MiscUtils.CanCast(AbilitySlot.Ability3) && JadeHero.EnemiesAroundAlive(ComboMenu.GetSlider("combo.useSpace.maxRange")) > 0)
             {
                 if (!MiscUtils.HasBuff(JadeHero, "Stealth")) //Not stealthed
                 {
@@ -425,10 +535,17 @@ namespace PipJade
 
                     if (testPred.CanHit)
                     {
-                        LocalPlayer.PressAbility(AbilitySlot.Ability5, true);
-                        LocalPlayer.EditAimPosition = true;
-                        LocalPlayer.Aim(testPred.CastPosition);
-                        return;
+                        if (ComboMenu.GetBoolean("combo.noBubble") && WillCollideWithEnemyBubble(myPos, testPred.CastPosition, ERadius))
+                        {
+                            //Do nothing
+                        }
+                        else
+                        {
+                            LocalPlayer.PressAbility(AbilitySlot.Ability5, true);
+                            LocalPlayer.EditAimPosition = true;
+                            LocalPlayer.Aim(testPred.CastPosition);
+                            return;
+                        }
                     }
                 }
             }
@@ -443,8 +560,17 @@ namespace PipJade
 
                         if (testPred.CanHit)
                         {
-                            LocalPlayer.PressAbility(AbilitySlot.Ability7, true);
-                            return;
+                            if (ComboMenu.GetBoolean("combo.noBubble") && WillCollideWithEnemyBubble(myPos, testPred.CastPosition, FRadius))
+                            {
+                                //Do nothing
+                            }
+                            else
+                            {
+                                LocalPlayer.PressAbility(AbilitySlot.Ability7, true);
+                                LocalPlayer.EditAimPosition = true;
+                                LocalPlayer.Aim(testPred.CastPosition);
+                                return;
+                            }
                         }
                     }
                 }
@@ -461,10 +587,17 @@ namespace PipJade
 
                         if (testPred.CanHit)
                         {
-                            LocalPlayer.PressAbility(AbilitySlot.Ability6, true);
-                            LocalPlayer.EditAimPosition = true;
-                            LocalPlayer.Aim(testPred.CastPosition);
-                            return;
+                            if (ComboMenu.GetBoolean("combo.noBubble") && WillCollideWithEnemyBubble(myPos, testPred.CastPosition, RRadius))
+                            {
+                                //Do nothing
+                            }
+                            else
+                            {
+                                LocalPlayer.PressAbility(AbilitySlot.Ability6, true);
+                                LocalPlayer.EditAimPosition = true;
+                                LocalPlayer.Aim(testPred.CastPosition);
+                                return;
+                            }
                         }
                     }
                 }
@@ -481,8 +614,15 @@ namespace PipJade
 
                         if (testPred.CanHit)
                         {
-                            LocalPlayer.PressAbility(AbilitySlot.EXAbility1, true);
-                            return;
+                            if (ComboMenu.GetBoolean("combo.noBubble") && WillCollideWithEnemyBubble(myPos, testPred.CastPosition, M2Radius))
+                            {
+                                //Do nothing
+                            }
+                            else
+                            {
+                                LocalPlayer.PressAbility(AbilitySlot.EXAbility1, true);
+                                return;
+                            }
                         }
                     }
                 }
@@ -498,8 +638,15 @@ namespace PipJade
 
                         if (testPred.CanHit)
                         {
-                            LocalPlayer.PressAbility(AbilitySlot.Ability2, true);
-                            return;
+                            if (ComboMenu.GetBoolean("combo.noBubble") && WillCollideWithEnemyBubble(myPos, testPred.CastPosition, M2Radius))
+                            {
+                                //Do nothing
+                            }
+                            else
+                            {
+                                LocalPlayer.PressAbility(AbilitySlot.Ability2, true);
+                                return;
+                            }
                         }
                     }
                 }
@@ -513,10 +660,17 @@ namespace PipJade
 
                     if (testPred.CanHit)
                     {
-                        LocalPlayer.PressAbility(AbilitySlot.Ability1, true);
-                        LocalPlayer.EditAimPosition = true;
-                        LocalPlayer.Aim(testPred.CastPosition);
-                        return;
+                        if (ComboMenu.GetBoolean("combo.noBubble") && WillCollideWithEnemyBubble(myPos, testPred.CastPosition, M1Radius))
+                        {
+                            //Do nothing
+                        }
+                        else
+                        {
+                            LocalPlayer.PressAbility(AbilitySlot.Ability1, true);
+                            LocalPlayer.EditAimPosition = true;
+                            LocalPlayer.Aim(testPred.CastPosition);
+                            return;
+                        }
                     }
                 }
             }
@@ -632,11 +786,16 @@ namespace PipJade
                 return;
             }
 
+            foreach (var obj in SpecialCircleObjects)
+            {
+                if (obj.Active)
+                {
+                    Drawing.DrawCircle(obj.Position, obj.Radius, UnityEngine.Color.green);
+                }
+            }
+
             Drawing.DrawString(new Vector2(1920f / 2f, 1080f / 2f - 5f),
                 "Targeting mode: " + (KeysMenu.GetKeybind("keys.changeTargeting") ? "LowestHealth" : "NearMouse"), UnityEngine.Color.yellow, ViewSpace.ScreenSpacePixels);
-
-            //Drawing.DrawString(new Vector2(1920f / 2f, 1080f / 2f + 100f).ScreenToWorld(),
-            //    "Being casted: " + (CastingIndexToSlot(JadeHero.AbilitySystem.CastingAbilityIndex) == null ? "None" : Enum.GetName(typeof(AbilitySlot), CastingIndexToSlot(JadeHero.AbilitySystem.CastingAbilityIndex).Value)), UnityEngine.Color.magenta);
 
             if (DrawingsMenu.GetBoolean("draw.rangeM1"))
             {
@@ -656,6 +815,11 @@ namespace PipJade
             if (DrawingsMenu.GetBoolean("draw.rangeSpace"))
             {
                 Drawing.DrawCircle(JadeHero.MapObject.Position, (!HasExplosiveJump ? SpaceRange : SpaceRange + (SpaceRange * 20f / 100f)), UnityEngine.Color.green);
+            }
+
+            if (DrawingsMenu.GetBoolean("draw.rangeSpace.safeRange"))
+            {
+                Drawing.DrawCircle(JadeHero.MapObject.Position, ComboMenu.GetSlider("combo.useSpace.maxRange"), UnityEngine.Color.blue);
             }
 
             if (DrawingsMenu.GetBoolean("draw.rangeE"))
@@ -846,6 +1010,46 @@ namespace PipJade
 
             //If all else fails, just return mousepos
             return InputManager.MousePosition.ScreenToWorld();
+        }
+
+        private static bool WillCollideWithEnemyBubble(Vector2 fromPos, Vector2 toPos, float projRadius)
+        {
+            if (SpecialCircleObjects.All(x => x.Active == false))
+            {
+                return false;
+            }
+
+            foreach (var special in SpecialCircleObjects)
+            {
+                if (special.Active == false)
+                {
+                    continue;
+                }
+
+                var result = Geometry.CircleVsThickLine(special.Position, special.Radius, fromPos, toPos, projRadius, false);
+                if (result)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+    }
+
+    public class SpecialEnemyCircleObject
+    {
+        public string Name { get; private set; }
+        public float Radius { get; set; }
+        public bool Active { get; set; }
+        public Vector2 Position { get; set; }
+
+        public SpecialEnemyCircleObject(string name, float radius, bool active = false, Vector2 position = default(Vector2))
+        {
+            Name = name;
+            Radius = radius;
+            Active = active;
+            Position = position;
         }
     }
 }
