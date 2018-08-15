@@ -299,7 +299,7 @@ namespace PipJade
 
             if (noShield)
             {
-                enemiesToTarget = enemiesToTarget.Where(x => !x.HasShield()).ToList();
+                enemiesToTarget = enemiesToTarget.Where(x => !x.HasShield());
             }
 
             var M1Target = TargetSelector.GetTarget(enemiesToTarget, targetMode, M1Range);
