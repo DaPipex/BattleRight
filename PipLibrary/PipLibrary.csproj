@@ -30,11 +30,21 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="BattleRight.Core">
-      <HintPath>..\..\..\..\Downloads\BR\Release\System\BattleRight.Core.dll</HintPath>
+    <Reference Include="BattleRight.Core, Version=1.0.0.0, Culture=neutral, PublicKeyToken=65bb327b54febf4b, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\..\Desktop\BRight\Release\System\BattleRight.Core.dll</HintPath>
     </Reference>
-    <Reference Include="BattleRight.SDK">
-      <HintPath>..\..\..\..\Downloads\BR\Release\System\BattleRight.SDK.dll</HintPath>
+    <Reference Include="BattleRight.Helper, Version=1.0.0.0, Culture=neutral, PublicKeyToken=889728e60ee12fc0, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\..\Desktop\BRight\Release\System\BattleRight.Helper.dll</HintPath>
+    </Reference>
+    <Reference Include="BattleRight.Sandbox, Version=1.0.0.0, Culture=neutral, PublicKeyToken=17d7f475c70d8a09, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\..\Desktop\BRight\Release\System\BattleRight.Sandbox.dll</HintPath>
+    </Reference>
+    <Reference Include="BattleRight.SDK, Version=1.0.0.0, Culture=neutral, PublicKeyToken=a667324049f5f09a, processorArchitecture=x86">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\..\Desktop\BRight\Release\System\BattleRight.SDK.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -42,8 +52,9 @@
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
-    <Reference Include="UnityEngine">
-      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Battlerite\Battlerite_Data\Managed\UnityEngine.dll</HintPath>
+    <Reference Include="UnityEngine, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\..\Desktop\BRight\Release\System\UnityEngine.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>

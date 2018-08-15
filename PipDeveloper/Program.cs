@@ -104,6 +104,7 @@ namespace PipDeveloper
             _devMenu.AddSeparator(10f);
 
             _devMenu.AddLabel("Drawings");
+            _devMenu.Add(new MenuCheckBox("draw.velocity", "Draw my char's velocity", false));
             _devMenu.Add(new MenuCheckBox("draw.customCircle", "Draw custom circle", true));
             _devMenu.Add(new MenuCheckBox("draw.customCircle.mousePos", "Draw custom circle at mouse position", false));
             _devMenu.Add(new MenuSlider("draw.customCircle.range", "    ^ Range", 9.5f, 10f, 0f));
@@ -414,6 +415,14 @@ namespace PipDeveloper
             if (!Game.IsInGame)
             {
                 return;
+            }
+
+            if (_devMenu.GetBoolean("draw.velocity"))
+            {
+                var myPos = DevHero.MapObject.Position;
+                var myPosOff = new Vector2(myPos.X, myPos.Y + 3f);
+                var myVel = DevHero.NetworkMovement.Velocity;
+                Drawing.DrawString(myPosOff, "Velocity: " + myVel + " - Speed: " + myVel.Length(), UnityEngine.Color.green);
             }
 
             if (_devMenu.GetBoolean("draw.customCircle.increase"))

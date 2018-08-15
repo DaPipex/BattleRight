@@ -51,19 +51,24 @@ namespace PipLibrary.Utils
             return false;
         }
 
+        public static bool HasBuff(this Character player, string buffName)
+        {
+            return player.Buffs.Any(x => x.ObjectName.Equals(buffName));
+        }
+
         public static bool HasShield(this Character player)
         {
             return player.HasBuff("BulwarkBuff") || player.HasBuff("DivineShieldBuff");
         }
 
+        public static bool HasParry(this Character player)
+        {
+            return player.HasBuff("GustBuff") || player.HasBuff("TimeBenderBuff");
+        }
+
         public static bool HasHardCC(this Character player)
         {
             return player.HasCCOfType(CCType.Stun) || player.HasCCOfType(CCType.Snared) || player.HasCCOfType(CCType.Root);
-        }
-
-        public static bool HasBuff(this Character player, string buffName)
-        {
-            return player.Buffs.Any(x => x.ObjectName.Equals(buffName));
         }
 
         [Obsolete]
