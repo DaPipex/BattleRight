@@ -28,10 +28,12 @@ namespace PipKaan
 {
     public class PipKaan : IAddon
     {
-        private static Menu KaanMenu;
-        private static Menu KeysMenu, ComboMenu, DrawMenu;
+        private const bool _debugMode = false;
 
-        private static Character KaanHero;
+        private static Menu KaanMenu;
+        private static Menu KeysMenu, ComboMenu, DrawMenu, DebugMenu;
+
+        private static Character KaanHero => LocalPlayer.Instance; 
         private static readonly string HeroName = "Ruh Kaan";
 
         private const float M2Speed = 25f;
@@ -57,38 +59,81 @@ namespace PipKaan
         private const float F_M1Range = 2.5f;
         private const float F_M2Range = 9.6f;
 
+        private static readonly UnityEngine.Color RangeColor = new UnityEngine.Color(176f / 255f, 51f / 255f, 230f / 255f);
+        private static readonly UnityEngine.Color MinRangeColor = new UnityEngine.Color(239f / 255f, 122f / 255f, 164f / 255f);
+        private static readonly UnityEngine.Color SafeRangeColor = new UnityEngine.Color(231f / 255f, 240f / 255f, 40f / 255f);
+
         private static readonly List<Battlerite> Battlerites = new List<Battlerite>(5);
 
-        private static bool HasTenaciousDemon;
-        private static bool HasNetherBlade;
+        private static bool HasTenaciousDemon = false;
+        private static bool HasNetherBlade = false;
 
         private static AbilitySlot? LastAbilityFired = null;
+
+        private static bool DidMatchInit = false;
 
         public void OnInit()
         {
             InitMenu();
 
-            Game.OnMatchStateUpdate += OnMatchStateUpdate;
-            Game.OnUpdate += OnUpdate;
-            Game.OnDraw += OnDraw;
+            Game.OnMatchStart += OnMatchStart;
+            Game.OnMatchEnd += OnMatchEnd;
         }
 
-        private void OnMatchStateUpdate(MatchStateUpdate args)
+        private void OnMatchStart(EventArgs args)
         {
-            if (EntitiesManager.LocalPlayer.CharName != HeroName)
+            if (KaanHero == null || !KaanHero.CharName.Equals(HeroName))
             {
                 return;
             }
 
-            if (args.OldMatchState == MatchState.BattleritePicking && args.NewMatchState != MatchState.BattleritePicking)
+            //KaanHero = LocalPlayer.Instance;
+
+            Game.OnUpdate += OnUpdate;
+            Game.OnDraw += OnDraw;
+            Game.OnMatchStateUpdate += OnMatchStateUpdate;
+
+            if (Game.CurrentMatchState == MatchState.InRound)
             {
+                GetBattlerites();
+            }
+
+            DidMatchInit = true;
+        }
+
+        private void OnMatchEnd(EventArgs args)
+        {
+            if (DidMatchInit)
+            {
+                Game.OnUpdate -= OnUpdate;
+                Game.OnDraw -= OnDraw;
+
+                //KaanHero = null;
+
+                DidMatchInit = false;
+            }
+        }
+
+        private void OnMatchStateUpdate(MatchStateUpdate args)
+        {
+            if (KaanHero == null)
+            {
+                return;
+            }
+
+            if (args.OldMatchState == MatchState.BattleritePicking || args.NewMatchState == MatchState.PreRound)
+            {
+                //KaanHero = LocalPlayer.Instance;
                 GetBattlerites();
             }
         }
 
         private static void GetBattlerites()
         {
-            KaanHero = EntitiesManager.LocalPlayer;
+            if (KaanHero == null)
+            {
+                return;
+            }
 
             if (Battlerites.Any())
             {
@@ -103,34 +148,27 @@ namespace PipKaan
                     Battlerites.Add(br);
                 }
             }
+
+            HasTenaciousDemon = Battlerites.Any(x => x.Name.Equals("TenaciousDemonUpgrade"));
+            HasNetherBlade = Battlerites.Any(x => x.Name.Equals("NetherBladeUpgrade"));
         }
 
         private void OnUpdate(EventArgs args)
         {
-            if (!Game.IsInGame)
+            if (_debugMode)
             {
-                return;
+                DebugUpdate();
             }
-
-            KaanHero = EntitiesManager.LocalPlayer;
-
-            if (KaanHero.CharName != HeroName)
-            {
-                return;
-            }
-
-            HasTenaciousDemon = Battlerites.Any(x => x.Name.Equals("TenaciousDemonUpgrade"));
-            HasNetherBlade = Battlerites.Any(x => x.Name.Equals("NetherBladeUpgrade"));
 
             if (KeysMenu.GetKeybind("keys.combo"))
             {
                 ComboMode();
             }
-            else if (KeysMenu.GetKeybind("keys.orb"))
+            else if (/*KeysMenu.GetKeybind("keys.orb")*/false)
             {
                 //OrbMode();
             }
-            else if (KeysMenu.GetKeybind("keys.heal"))
+            else if (/*KeysMenu.GetKeybind("keys.heal")*/false)
             {
                 //HealTeammate();
             }
@@ -141,17 +179,36 @@ namespace PipKaan
             }
         }
 
+        private static void DebugUpdate()
+        {
+            if (DebugMenu.GetBoolean("debug.updateBattlerites"))
+            {
+                GetBattlerites();
+                DebugMenu.SetBoolean("debug.updateBattlerites", false);
+            }
+        }
+
         private static void ComboMode()
         {
             var targetModeKey = KeysMenu.GetKeybind("keys.changeTargeting");
             var targetMode = targetModeKey ? TargetingMode.LowestHealth : TargetingMode.NearMouse;
 
-            var M1Target = TargetSelector.GetTarget(targetMode, M1Range);
-            var M2Target = TargetSelector.GetTarget(targetMode, M2Range);
-            var SpaceTarget = TargetSelector.GetTarget(targetMode, SpaceMaxRange);
-            var ETarget = TargetSelector.GetTarget(targetMode, ERange);
-            var RTarget = TargetSelector.GetTarget(targetMode, RRange);
-            var F_M2Target = TargetSelector.GetTarget(targetMode, F_M2Range);
+            var invisibleTargets = ComboMenu.GetBoolean("combo.invisibleTargets");
+
+            var enemiesToTarget = EntitiesManager.EnemyTeam.Where(x => x.IsValid && !x.Living.IsDead
+            && !x.PhysicsCollision.IsImmaterial && !x.IsCountering && !x.HasShield() && !x.HasConsumeBuff && !x.HasParry());
+
+            if (!invisibleTargets)
+            {
+                enemiesToTarget = enemiesToTarget.Where(x => !x.CharacterModel.IsModelInvisible);
+            }
+
+            var M1Target = TargetSelector.GetTarget(enemiesToTarget, targetMode, M1Range);
+            var M2Target = TargetSelector.GetTarget(enemiesToTarget, targetMode, M2Range);
+            var SpaceTarget = TargetSelector.GetTarget(enemiesToTarget, targetMode, SpaceMaxRange);
+            var ETarget = TargetSelector.GetTarget(enemiesToTarget, targetMode, ERange);
+            var RTarget = TargetSelector.GetTarget(enemiesToTarget, targetMode, RRange);
+            var F_M2Target = TargetSelector.GetTarget(enemiesToTarget, targetMode, F_M2Range);
 
             var isCastingOrChanneling = KaanHero.AbilitySystem.IsCasting || KaanHero.IsChanneling || KaanHero.HasBuff("ConsumeBuff") || KaanHero.HasBuff("ReapingScytheBuff");
 
@@ -174,10 +231,14 @@ namespace PipKaan
                         {
                             LocalPlayer.Aim(enemyProj.MapObject.Position);
                         }
+                        else
+                        {
+                            LocalPlayer.Aim(InputManager.MousePosition.ScreenToWorld());
+                        }
                         break;
 
                     case AbilitySlot.Ability5:
-                        if (ETarget != null && !ETarget.IsCountering && !ETarget.HasShield())
+                        if (ETarget != null)
                         {
                             var pred = TestPrediction.GetNormalLinePrediction(myPos, ETarget, ERange, ESpeed, ERadius, true);
                             if (pred.CanHit)
@@ -194,7 +255,7 @@ namespace PipKaan
                     case AbilitySlot.Ability2:
                         if (LocalPlayer.GetAbilityHudData(AbilitySlot.Ability2).Name.Equals("ShadowBoltAbility")) //Normal mode
                         {
-                            if (M2Target != null && !M2Target.IsCountering && !M2Target.HasShield())
+                            if (M2Target != null)
                             {
                                 var pred = TestPrediction.GetNormalLinePrediction(myPos, M2Target, M2Range, M2Speed, M2Radius, true);
                                 if (pred.CanHit)
@@ -209,7 +270,7 @@ namespace PipKaan
                         }
                         else //Ulti mode
                         {
-                            if (F_M2Target != null && !F_M2Target.IsCountering && !F_M2Target.HasShield())
+                            if (F_M2Target != null)
                             {
                                 var pred = TestPrediction.GetNormalLinePrediction(myPos, F_M2Target, F_M2Range, F_M2Speed, F_M2Radius, true);
                                 if (pred.CanHit)
@@ -247,7 +308,7 @@ namespace PipKaan
                         break;
 
                     case AbilitySlot.Ability1:
-                        if (M1Target != null && !M1Target.IsCountering && !M1Target.HasShield())
+                        if (M1Target != null)
                         {
                             LocalPlayer.Aim(M1Target.MapObject.Position);
                         }
@@ -285,7 +346,7 @@ namespace PipKaan
 
             if (ComboMenu.GetBoolean("combo.useE") && MiscUtils.CanCast(AbilitySlot.Ability5))
             {
-                if (LastAbilityFired == null && ETarget != null && !ETarget.IsCountering && !ETarget.HasShield() && ETarget.Distance(KaanHero) > ComboMenu.GetSlider("combo.useE.minRange"))
+                if (LastAbilityFired == null && ETarget != null && ETarget.Distance(KaanHero) > ComboMenu.GetSlider("combo.useE.minRange"))
                 {
                     var pred = TestPrediction.GetNormalLinePrediction(myPos, ETarget, ERange, ESpeed, ERadius, true);
                     if (pred.CanHit)
@@ -297,11 +358,11 @@ namespace PipKaan
                 }
             }
 
-            if ((ComboMenu.GetBoolean("combo.useM2") || ComboMenu.GetBoolean("combo.ultiMode.useM2")) && MiscUtils.CanCast(AbilitySlot.Ability2))
+            if (ComboMenu.GetBoolean("combo.useM2") && MiscUtils.CanCast(AbilitySlot.Ability2))
             {
                 if (LocalPlayer.GetAbilityHudData(AbilitySlot.Ability2).Name.Equals("ShadowBoltAbility"))
                 {
-                    if (LastAbilityFired == null && M2Target != null && !M2Target.IsCountering && !M2Target.HasShield() 
+                    if (LastAbilityFired == null && M2Target != null
                         && KaanHero.EnemiesAroundAlive(ComboMenu.GetSlider("combo.useM2.safeRange")) == 0)
                     {
                         var pred = TestPrediction.GetNormalLinePrediction(myPos, M2Target, M2Range, M2Speed, M2Radius, true);
@@ -313,9 +374,13 @@ namespace PipKaan
                         }
                     }
                 }
-                else
+            }
+
+            if (ComboMenu.GetBoolean("combo.ultiMode.useM2") && MiscUtils.CanCast(AbilitySlot.Ability2))
+            {
+                if (!LocalPlayer.GetAbilityHudData(AbilitySlot.Ability2).Name.Equals("ShadowBoltAbility"))
                 {
-                    if (LastAbilityFired == null && F_M2Target != null && !F_M2Target.IsCountering && !F_M2Target.HasShield() 
+                    if (LastAbilityFired == null && F_M2Target != null
                         && F_M2Target.Distance(KaanHero) > ComboMenu.GetSlider("combo.ultiMode.useM2.minRange"))
                     {
                         var pred = TestPrediction.GetNormalLinePrediction(myPos, F_M2Target, F_M2Range, F_M2Speed, F_M2Radius, true);
@@ -375,7 +440,7 @@ namespace PipKaan
 
             if ((ComboMenu.GetBoolean("combo.useM1") || ComboMenu.GetBoolean("combo.ultiMode.useM1")) && MiscUtils.CanCast(AbilitySlot.Ability1))
             {
-                if (LastAbilityFired == null && M1Target != null && !M1Target.IsCountering && !M1Target.HasShield())
+                if (LastAbilityFired == null && M1Target != null)
                 {
                     LocalPlayer.PressAbility(AbilitySlot.Ability1, true);
                     LocalPlayer.EditAimPosition = true;
@@ -391,13 +456,60 @@ namespace PipKaan
                 return;
             }
 
-            if (KaanHero.CharName != HeroName)
+            if (DrawMenu.GetBoolean("draw.disableAll"))
             {
                 return;
             }
 
+            if (_debugMode)
+            {
+                DebugDraw();
+            }
+
             Drawing.DrawString(new Vector2(1920f / 2f, 1080f / 2f - 5f),
                 "Targeting mode: " + (KeysMenu.GetKeybind("keys.changeTargeting") ? "LowestHealth" : "NearMouse"), UnityEngine.Color.yellow, ViewSpace.ScreenSpacePixels);
+
+            var myPos = KaanHero.MapObject.Position;
+
+            if (DrawMenu.GetBoolean("draw.rangeM2"))
+            {
+                Drawing.DrawCircle(myPos, M2Range, RangeColor);
+            }
+
+            if (DrawMenu.GetBoolean("draw.rangeM2.safeRange"))
+            {
+                Drawing.DrawCircle(myPos, ComboMenu.GetSlider("combo.useM2.safeRange"), SafeRangeColor);
+            }
+
+            if (DrawMenu.GetBoolean("draw.rangeE"))
+            {
+                Drawing.DrawCircle(myPos, ERange, RangeColor);
+            }
+
+            if (DrawMenu.GetBoolean("draw.rangeE.minRange"))
+            {
+                Drawing.DrawCircle(myPos, ComboMenu.GetSlider("combo.useE.minRange"), MinRangeColor);
+            }
+
+            if (DrawMenu.GetBoolean("draw.ultiMode.rangeM2"))
+            {
+                Drawing.DrawCircle(myPos, F_M2Range, RangeColor);
+            }
+
+            if (DrawMenu.GetBoolean("draw.ultiMode.rangeM2.minRange"))
+            {
+                Drawing.DrawCircle(myPos, ComboMenu.GetSlider("combo.ultiMode.useM2.minRange"), MinRangeColor);
+            }
+        }
+
+        private static void DebugDraw()
+        {
+            if (DebugMenu.GetBoolean("debug.checkBattlerites"))
+            {
+                var pos = new Vector2(100f, 100f);
+                Drawing.DrawString(pos, "Tenacious Demon: " + HasTenaciousDemon, UnityEngine.Color.cyan, ViewSpace.ScreenSpacePixels);
+                Drawing.DrawString(new Vector2(pos.X, pos.Y + 20f), "Nether Blade: " + HasNetherBlade, UnityEngine.Color.cyan, ViewSpace.ScreenSpacePixels);
+            }
         }
 
         private static void InitMenu()
@@ -406,16 +518,17 @@ namespace PipKaan
 
             KeysMenu = new Menu("keysmenu", "Keys", true);
             KeysMenu.Add(new MenuKeybind("keys.combo", "Combo key", UnityEngine.KeyCode.LeftControl));
-            KeysMenu.Add(new MenuKeybind("keys.orb", "Orb mode", UnityEngine.KeyCode.Mouse3));
-            KeysMenu.Add(new MenuKeybind("keys.heal", "Heal teammate", UnityEngine.KeyCode.G));
+            //KeysMenu.Add(new MenuKeybind("keys.orb", "Orb mode", UnityEngine.KeyCode.Mouse3));
+            //KeysMenu.Add(new MenuKeybind("keys.heal", "Heal teammate", UnityEngine.KeyCode.G));
             KeysMenu.Add(new MenuKeybind("keys.changeTargeting", "Change targeting mode", UnityEngine.KeyCode.T, false, true));
             KaanMenu.Add(KeysMenu);
 
             ComboMenu = new Menu("combomenu", "Combo", true);
+            ComboMenu.Add(new MenuCheckBox("combo.invisibleTargets", "Attack invisible targets", true));
             ComboMenu.Add(new MenuCheckBox("combo.useM1", "Use Left-Mouse (Defiled Blade)", true));
             ComboMenu.Add(new MenuCheckBox("combo.useM2", "Use Right-Mouse (Shadowbolt)", true));
             ComboMenu.Add(new MenuSlider("combo.useM2.safeRange", "    ^ Safe range", 4.5f, M2Range - 1f, 0f));
-            ComboMenu.Add(new MenuCheckBox("combo.useSpace", "Use Space (Sinister Strike)", true));
+            ComboMenu.Add(new MenuCheckBox("combo.useSpace", "Use Space (Sinister Strike)", false));
             ComboMenu.Add(new MenuCheckBox("combo.useQ", "Use Q (Consume) to reset Right-Mouse", true));
             ComboMenu.Add(new MenuCheckBox("combo.useE", "Use E (Claw of the wicked)", true));
             ComboMenu.Add(new MenuSlider("combo.useE.minRange", "    ^ Minimum range", M1Range, ERange - 1f, 0f));
@@ -431,6 +544,26 @@ namespace PipKaan
             ComboMenu.Add(new MenuCheckBox("combo.ultiMode.useM2", "Use Right-Mouse (Shadow Claw)", true));
             ComboMenu.Add(new MenuSlider("combo.ultiMode.useM2.minRange", "    ^ Min Range", F_M1Range, F_M2Range - 1f, 0f));
             KaanMenu.Add(ComboMenu);
+
+            DrawMenu = new Menu("drawingsmenu", "Drawings", true);
+            DrawMenu.Add(new MenuCheckBox("draw.disableAll", "Disable all drawings", false));
+            DrawMenu.Add(new MenuCheckBox("draw.rangeM2", "Draw Right-Mouse Range (Shadowbolt)", true));
+            DrawMenu.Add(new MenuCheckBox("draw.rangeM2.safeRange", "Draw Right-Mouse Safe-Range", false));
+            DrawMenu.Add(new MenuCheckBox("draw.rangeE", "Draw E Range (Claw of the wicked)", true));
+            DrawMenu.Add(new MenuCheckBox("draw.rangeE.minRange", "Draw E Minimum range to use (Claw of the wicked)", false));
+            DrawMenu.AddSeparator(10f);
+            DrawMenu.AddLabel("While in Ultimate (Shadow Beast) Ranges");
+            DrawMenu.Add(new MenuCheckBox("draw.ultiMode.rangeM2", "Draw Right-Mouse Range (Shadow Claw)", false));
+            DrawMenu.Add(new MenuCheckBox("draw.ultiMode.rangeM2.minRange", "Draw Right-Mouse Minimum range to use (Shadow Claw)", false));
+            KaanMenu.Add(DrawMenu);
+
+            DebugMenu = new Menu("debugmenu", "Debug", true);
+            DebugMenu.Add(new MenuCheckBox("debug.updateBattlerites", "Update battlerites", false));
+            DebugMenu.Add(new MenuCheckBox("debug.checkBattlerites", "Check battlerites status", false));
+            if (_debugMode)
+            {
+                KaanMenu.Add(DebugMenu);
+            }
 
             MainMenu.AddMenu(KaanMenu);
         }
