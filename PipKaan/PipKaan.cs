@@ -107,6 +107,7 @@ namespace PipKaan
             {
                 Game.OnUpdate -= OnUpdate;
                 Game.OnDraw -= OnDraw;
+                Game.OnMatchStateUpdate -= OnMatchStateUpdate;
 
                 //KaanHero = null;
 
