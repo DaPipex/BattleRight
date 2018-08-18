@@ -25,7 +25,19 @@ namespace PipLibrary.Utils
         {
             var abilityHudData = LocalPlayer.GetAbilityHudData(slot);
 
-            return abilityHudData != null && abilityHudData.CooldownLeft <= 0 && abilityHudData.EnergyCost <= EntitiesManager.LocalPlayer.Energized.Energy;
+            if (abilityHudData != null && abilityHudData.EnergyCost <= EntitiesManager.LocalPlayer.Energized.Energy)
+            {
+                if (abilityHudData.UsesCharges)
+                {
+                    return abilityHudData.ChargeCount > 0;
+                }
+                else
+                {
+                    return abilityHudData.CooldownLeft <= 0;
+                }
+            }
+
+            return false;
         }
 
         public static int EnemiesAroundAlive(this InGameObject gameObj, float distance)
