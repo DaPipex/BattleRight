@@ -30,7 +30,7 @@ namespace PipKaan
 {
     public class PipKaan : IAddon
     {
-        private const bool _debugMode = true;
+        private const bool _debugMode = false;
 
         private static Menu KaanMenu;
         private static Menu KeysMenu, ComboMenu, HealMenu, DrawMenu, DebugMenu;
@@ -60,6 +60,9 @@ namespace PipKaan
         private const float FRange = 5f;
         private const float F_M1Range = 2.5f;
         private const float F_M2Range = 9.6f;
+
+        private static bool EvadeExists => EvadeHandler.EvadeExists;
+        private static bool IsREvading => EvadeHandler.RuhKaanR.IsEvading;
 
         private static readonly UnityEngine.Color RangeColor = new UnityEngine.Color(176f / 255f, 51f / 255f, 230f / 255f);
         private static readonly UnityEngine.Color MinRangeColor = new UnityEngine.Color(239f / 255f, 122f / 255f, 164f / 255f);
@@ -127,8 +130,6 @@ namespace PipKaan
                 Game.OnDraw -= OnDraw;
                 Game.OnMatchStateUpdate -= OnMatchStateUpdate;
 
-                //KaanHero = null;
-
                 DidMatchInit = false;
             }
         }
@@ -142,7 +143,6 @@ namespace PipKaan
 
             if (args.OldMatchState == MatchState.BattleritePicking || args.NewMatchState == MatchState.PreRound)
             {
-                //KaanHero = LocalPlayer.Instance;
                 GetBattlerites();
             }
         }
@@ -338,7 +338,7 @@ namespace PipKaan
                         break;
 
                     case AbilitySlot.Ability2:
-                        if (LocalPlayer.GetAbilityHudData(AbilitySlot.Ability2).Name.Equals("ShadowBoltAbility")) //Normal mode
+                        if (!IsInUltimate) //Normal mode
                         {
                             if (M2Target != null)
                             {
@@ -371,12 +371,20 @@ namespace PipKaan
                         break;
 
                     case AbilitySlot.Ability6:
-                        if (RTarget != null)
+                        if (ComboMenu.GetBoolean("combo.useR.evade") && EvadeExists && IsREvading && RTarget == null)
                         {
-                            var pred = TestPrediction.GetPrediction(myPos, RTarget, RRange, 0f, RRadius, RAirTime);
-                            if (pred.CanHit)
+                            var pos = MathUtils.GetBestJumpPosition(0, 32, SpaceMaxRange);
+                            LocalPlayer.Aim(pos);
+                        }
+                        else
+                        {
+                            if (RTarget != null)
                             {
-                                LocalPlayer.Aim(pred.CastPosition);
+                                var pred = TestPrediction.GetPrediction(myPos, RTarget, RRange, 0f, RRadius, RAirTime);
+                                if (pred.CanHit)
+                                {
+                                    LocalPlayer.Aim(pred.CastPosition);
+                                }
                             }
                         }
                         break;
@@ -420,7 +428,6 @@ namespace PipKaan
                         LocalPlayer.PressAbility(AbilitySlot.Ability4, true);
                         LocalPlayer.EditAimPosition = true;
                         LocalPlayer.Aim(closestProj.MapObject.Position);
-                        KaanDebug("Tried to use Q");
                         return;
                     }
                 }
@@ -430,7 +437,6 @@ namespace PipKaan
                     if (LastAbilityFired == null && KaanHero.EnemiesAroundAlive(FRange) > 0)
                     {
                         LocalPlayer.PressAbility(AbilitySlot.Ability7, true);
-                        KaanDebug("Tried to use F");
                         return;
                     }
                 }
@@ -445,7 +451,6 @@ namespace PipKaan
                             LocalPlayer.PressAbility(AbilitySlot.Ability5, true);
                             LocalPlayer.EditAimPosition = true;
                             LocalPlayer.Aim(pred.CastPosition);
-                            KaanDebug("Tried to use E");
                             return;
                         }
                     }
@@ -462,7 +467,6 @@ namespace PipKaan
                             LocalPlayer.PressAbility(AbilitySlot.Ability2, true);
                             LocalPlayer.EditAimPosition = true;
                             LocalPlayer.Aim(pred.CastPosition);
-                            KaanDebug("Tried to use M2");
                             return;
                         }
                     }
@@ -481,7 +485,6 @@ namespace PipKaan
                                 LocalPlayer.PressAbility(AbilitySlot.Ability6, true);
                                 LocalPlayer.EditAimPosition = true;
                                 LocalPlayer.Aim(pred.CastPosition);
-                                KaanDebug("Tried to use R");
                                 return;
                             }
                         }
@@ -496,7 +499,6 @@ namespace PipKaan
                         if (LastAbilityFired == null && M1Target != null)
                         {
                             LocalPlayer.PressAbility(AbilitySlot.EXAbility1, true);
-                            KaanDebug("Tried to use EX1");
                             return;
                         }
                     }
@@ -512,7 +514,6 @@ namespace PipKaan
                             LocalPlayer.PressAbility(AbilitySlot.Ability3, true);
                             LocalPlayer.EditAimPosition = true;
                             LocalPlayer.Aim(pred.CastPosition);
-                            KaanDebug("Tried to use Space");
                             return;
                         }
                     }
@@ -525,7 +526,6 @@ namespace PipKaan
                         LocalPlayer.PressAbility(AbilitySlot.Ability1, true);
                         LocalPlayer.EditAimPosition = true;
                         LocalPlayer.Aim(M1Target.MapObject.Position);
-                        KaanDebug("Tried to use M1");
                         return;
                     }
                 }
@@ -543,7 +543,6 @@ namespace PipKaan
                             LocalPlayer.PressAbility(AbilitySlot.Ability2, true);
                             LocalPlayer.EditAimPosition = true;
                             LocalPlayer.Aim(pred.CastPosition);
-                            KaanDebug("Tried to use M2 in ultimate mode");
                             return;
                         }
                     }
@@ -556,7 +555,6 @@ namespace PipKaan
                         LocalPlayer.PressAbility(AbilitySlot.Ability1, true);
                         LocalPlayer.EditAimPosition = true;
                         LocalPlayer.Aim(M1Target.MapObject.Position);
-                        KaanDebug("Tried to use M1 in ultimate mode");
                         return;
                     }
                 }
@@ -674,6 +672,7 @@ namespace PipKaan
             ComboMenu.Add(new MenuSlider("combo.useE.minRange", "    ^ Minimum range", M1Range, ERange - 1f, 0f));
             ComboMenu.Add(new MenuCheckBox("combo.useR", "Use R (Nether Void) to refill Left-Mouse (if Nether Blade is active)", false));
             ComboMenu.Add(new MenuIntSlider("combo.useR.minEnergyBars", "    ^ Min energy bars", 3, 4, 1));
+            ComboMenu.Add(new MenuCheckBox("combo.useR.evade", "Use R (Nether Void) to evade (needs HoyerEvade)", false));
             ComboMenu.Add(new MenuCheckBox("combo.useEX1", "Use EX1 (Reaping Scythe)", false));
             ComboMenu.Add(new MenuIntSlider("combo.useEX1.minEnergyBars", "    ^ Min energy bars", 3, 4, 1));
             ComboMenu.Add(new MenuCheckBox("combo.useF", "Use F (Shadow Beast) when there's an enemy in range", true));
@@ -716,6 +715,8 @@ namespace PipKaan
             }
 
             MainMenu.AddMenu(KaanMenu);
+
+            EvadeHandler.Setup();
         }
 
         private static AbilitySlot? CastingIndexToSlot(int index)
@@ -772,13 +773,13 @@ namespace PipKaan
             return false;
         }
 
-        private static void KaanDebug(string message)
-        {
-            if (_debugMode && DebugMenu.GetBoolean("debug.abilityUsage"))
-            {
-                Logs.Info("[PipKaan Debug] " + message);
-            }
-        }
+        //private static void KaanDebug(string message)
+        //{
+        //    if (_debugMode && DebugMenu.GetBoolean("debug.abilityUsage"))
+        //    {
+        //        Logs.Info("[PipKaan Debug] " + message);
+        //    }
+        //}
 
         public void OnUnload()
         {
