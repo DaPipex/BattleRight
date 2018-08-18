@@ -25,7 +25,9 @@ namespace PipDeveloper
     class Program : IAddon
     {
         private static Menu _devMenu;
-        private static Character DevHero;
+        private static Character DevHero => LocalPlayer.Instance;
+
+        private static bool DidMatchInit = false;
 
         private static Projectile LastProj = null;
         private static Vector2 LastProjPosition;
@@ -95,11 +97,11 @@ namespace PipDeveloper
             _devMenu.Add(new MenuCheckBox("obj.create", "Print info of objects created", false));
             _devMenu.Add(new MenuCheckBox("obj.destroy", "Print info of objects destroyed", false));
 
-            //_devMenu.AddSeparator(10f);
+            _devMenu.AddSeparator(10f);
 
-            //_devMenu.AddLabel("Buff gain/remove");
-            //_devMenu.Add(new MenuCheckBox("buff.gain", "Print info on buff gain", false));
-            //_devMenu.Add(new MenuCheckBox("buff.remove", "Print info on buff remove", false));
+            _devMenu.AddLabel("Buff gain/remove");
+            _devMenu.Add(new MenuCheckBox("buff.gain", "Print info on buff gain", false));
+            _devMenu.Add(new MenuCheckBox("buff.remove", "Print info on buff remove", false));
 
             _devMenu.AddSeparator(10f);
 
@@ -124,12 +126,8 @@ namespace PipDeveloper
 
             MainMenu.AddMenu(_devMenu);
 
-            Game.OnUpdate += OnUpdate;
-            Game.OnDraw += OnDraw;
-            InGameObject.OnCreate += OnCreate;
-            InGameObject.OnDestroy += OnDestroy;
-            //BuffDetector.OnGainBuff += OnGainBuff;
-            //BuffDetector.OnRemoveBuff += OnRemoveBuff;
+            Game.OnMatchStart += OnMatchStart;
+            Game.OnMatchEnd += OnMatchEnd;
         }
 
         private static void OnGainBuff(Character player, Buff buff)
@@ -219,7 +217,32 @@ namespace PipDeveloper
 
         private static void OnMatchStart(EventArgs args)
         {
+            if (DevHero == null)
+            {
+                return;
+            }
 
+            Game.OnUpdate += OnUpdate;
+            Game.OnDraw += OnDraw;
+            InGameObject.OnCreate += OnCreate;
+            InGameObject.OnDestroy += OnDestroy;
+            BuffDetector.OnGainBuff += OnGainBuff;
+            BuffDetector.OnRemoveBuff += OnRemoveBuff;
+
+            DidMatchInit = true;
+        }
+
+        private static void OnMatchEnd(EventArgs args)
+        {
+            if (DidMatchInit)
+            {
+                Game.OnUpdate -= OnUpdate;
+                Game.OnDraw -= OnDraw;
+                InGameObject.OnCreate -= OnCreate;
+                InGameObject.OnDestroy -= OnDestroy;
+                BuffDetector.OnGainBuff -= OnGainBuff;
+                BuffDetector.OnRemoveBuff -= OnRemoveBuff;
+            }
         }
 
         private static void OnUpdate(EventArgs args)
@@ -228,8 +251,6 @@ namespace PipDeveloper
             {
                 return;
             }
-
-            DevHero = EntitiesManager.LocalPlayer;
 
             //ProjectileDebug();
             MiscDebug();
