@@ -10,6 +10,8 @@ using BattleRight.Core.GameObjects;
 using BattleRight.Core.GameObjects.Models;
 using BattleRight.Core.Math;
 
+using BattleRight.Helper;
+
 using BattleRight.SDK;
 using BattleRight.SDK.Enumeration;
 using BattleRight.SDK.Events;
@@ -28,7 +30,7 @@ namespace PipKaan
 {
     public class PipKaan : IAddon
     {
-        private const bool _debugMode = false;
+        private const bool _debugMode = true;
 
         private static Menu KaanMenu;
         private static Menu KeysMenu, ComboMenu, HealMenu, DrawMenu, DebugMenu;
@@ -70,7 +72,19 @@ namespace PipKaan
 
         private static float TrueERange => !HasTenaciousDemon ? ERange : ERange + (ERange * 12f / 100f);
 
-        private static bool IsInUltimate => KaanHero.HasBuff("ShadowBeastBuff");
+        private static bool IsInUltimate
+        {
+            get
+            {
+                var abilityHud = LocalPlayer.GetAbilityHudData(AbilitySlot.Ability2);
+                if (abilityHud == null)
+                {
+                    return false;
+                }
+
+                return abilityHud.Name.Equals("ShadowClawAbility");
+            }
+        }
 
         private static AbilitySlot? LastAbilityFired = null;
 
@@ -396,44 +410,47 @@ namespace PipKaan
                 LastAbilityFired = null;
             }
 
-            if (ComboMenu.GetBoolean("combo.useQ") && MiscUtils.CanCast(AbilitySlot.Ability4) && !MiscUtils.CanCast(AbilitySlot.Ability2))
+            if (!IsInUltimate)
             {
-                Projectile closestProj;
-                if (EnemyProjectileGoingToHitUnit(KaanHero, out closestProj))
+                if (ComboMenu.GetBoolean("combo.useQ") && MiscUtils.CanCast(AbilitySlot.Ability4) && !MiscUtils.CanCast(AbilitySlot.Ability2))
                 {
-                    LocalPlayer.PressAbility(AbilitySlot.Ability4, true);
-                    LocalPlayer.EditAimPosition = true;
-                    LocalPlayer.Aim(closestProj.MapObject.Position);
-                    return;
-                }
-            }
-
-            if (ComboMenu.GetBoolean("combo.useF") && MiscUtils.CanCast(AbilitySlot.Ability7) && !IsInUltimate)
-            {
-                if (LastAbilityFired == null && KaanHero.EnemiesAroundAlive(FRange) > 0)
-                {
-                    LocalPlayer.PressAbility(AbilitySlot.Ability7, true);
-                    return;
-                }
-            }
-
-            if (ComboMenu.GetBoolean("combo.useE") && MiscUtils.CanCast(AbilitySlot.Ability5))
-            {
-                if (LastAbilityFired == null && ETarget != null && ETarget.Distance(KaanHero) > ComboMenu.GetSlider("combo.useE.minRange"))
-                {
-                    var pred = TestPrediction.GetNormalLinePrediction(myPos, ETarget, TrueERange, ESpeed, ERadius, true);
-                    if (pred.CanHit)
+                    Projectile closestProj;
+                    if (EnemyProjectileGoingToHitUnit(KaanHero, out closestProj))
                     {
-                        LocalPlayer.PressAbility(AbilitySlot.Ability5, true);
+                        LocalPlayer.PressAbility(AbilitySlot.Ability4, true);
                         LocalPlayer.EditAimPosition = true;
-                        LocalPlayer.Aim(pred.CastPosition);
+                        LocalPlayer.Aim(closestProj.MapObject.Position);
+                        KaanDebug("Tried to use Q");
                         return;
                     }
                 }
-            }
 
-            if (!IsInUltimate)
-            {
+                if (ComboMenu.GetBoolean("combo.useF") && MiscUtils.CanCast(AbilitySlot.Ability7))
+                {
+                    if (LastAbilityFired == null && KaanHero.EnemiesAroundAlive(FRange) > 0)
+                    {
+                        LocalPlayer.PressAbility(AbilitySlot.Ability7, true);
+                        KaanDebug("Tried to use F");
+                        return;
+                    }
+                }
+
+                if (ComboMenu.GetBoolean("combo.useE") && MiscUtils.CanCast(AbilitySlot.Ability5))
+                {
+                    if (LastAbilityFired == null && ETarget != null && ETarget.Distance(KaanHero) > ComboMenu.GetSlider("combo.useE.minRange"))
+                    {
+                        var pred = TestPrediction.GetNormalLinePrediction(myPos, ETarget, TrueERange, ESpeed, ERadius, true);
+                        if (pred.CanHit)
+                        {
+                            LocalPlayer.PressAbility(AbilitySlot.Ability5, true);
+                            LocalPlayer.EditAimPosition = true;
+                            LocalPlayer.Aim(pred.CastPosition);
+                            KaanDebug("Tried to use E");
+                            return;
+                        }
+                    }
+                }
+
                 if (ComboMenu.GetBoolean("combo.useM2") && MiscUtils.CanCast(AbilitySlot.Ability2))
                 {
                     if (LastAbilityFired == null && M2Target != null
@@ -445,8 +462,71 @@ namespace PipKaan
                             LocalPlayer.PressAbility(AbilitySlot.Ability2, true);
                             LocalPlayer.EditAimPosition = true;
                             LocalPlayer.Aim(pred.CastPosition);
+                            KaanDebug("Tried to use M2");
                             return;
                         }
+                    }
+                }
+
+                if (ComboMenu.GetBoolean("combo.useR") && MiscUtils.CanCast(AbilitySlot.Ability6) && !KaanHero.IsWeaponCharged && HasNetherBlade)
+                {
+                    var energyRequired = ComboMenu.GetIntSlider("combo.useR.minEnergyBars") * 25;
+                    if (energyRequired <= KaanHero.Energized.Energy)
+                    {
+                        if (LastAbilityFired == null && RTarget != null)
+                        {
+                            var pred = TestPrediction.GetPrediction(myPos, RTarget, RRange, 0f, RRadius, RAirTime);
+                            if (pred.CanHit)
+                            {
+                                LocalPlayer.PressAbility(AbilitySlot.Ability6, true);
+                                LocalPlayer.EditAimPosition = true;
+                                LocalPlayer.Aim(pred.CastPosition);
+                                KaanDebug("Tried to use R");
+                                return;
+                            }
+                        }
+                    }
+                }
+
+                if (ComboMenu.GetBoolean("combo.useEX1") && MiscUtils.CanCast(AbilitySlot.EXAbility1))
+                {
+                    var energyRequired = ComboMenu.GetIntSlider("combo.useEX1.minEnergyBars") * 25;
+                    if (energyRequired <= KaanHero.Energized.Energy)
+                    {
+                        if (LastAbilityFired == null && M1Target != null)
+                        {
+                            LocalPlayer.PressAbility(AbilitySlot.EXAbility1, true);
+                            KaanDebug("Tried to use EX1");
+                            return;
+                        }
+                    }
+                }
+
+                if (ComboMenu.GetBoolean("combo.useSpace") && MiscUtils.CanCast(AbilitySlot.Ability3))
+                {
+                    if (LastAbilityFired == null && SpaceTarget != null)
+                    {
+                        var pred = TestPrediction.GetPrediction(myPos, SpaceTarget, SpaceMaxRange, 0f, SpaceRadius, SpaceAirTime);
+                        if (pred.CanHit)
+                        {
+                            LocalPlayer.PressAbility(AbilitySlot.Ability3, true);
+                            LocalPlayer.EditAimPosition = true;
+                            LocalPlayer.Aim(pred.CastPosition);
+                            KaanDebug("Tried to use Space");
+                            return;
+                        }
+                    }
+                }
+
+                if (ComboMenu.GetBoolean("combo.useM1") && MiscUtils.CanCast(AbilitySlot.Ability1))
+                {
+                    if (LastAbilityFired == null && M1Target != null)
+                    {
+                        LocalPlayer.PressAbility(AbilitySlot.Ability1, true);
+                        LocalPlayer.EditAimPosition = true;
+                        LocalPlayer.Aim(M1Target.MapObject.Position);
+                        KaanDebug("Tried to use M1");
+                        return;
                     }
                 }
             }
@@ -463,74 +543,12 @@ namespace PipKaan
                             LocalPlayer.PressAbility(AbilitySlot.Ability2, true);
                             LocalPlayer.EditAimPosition = true;
                             LocalPlayer.Aim(pred.CastPosition);
+                            KaanDebug("Tried to use M2 in ultimate mode");
                             return;
                         }
                     }
                 }
-            }
 
-            if (ComboMenu.GetBoolean("combo.useR") && MiscUtils.CanCast(AbilitySlot.Ability6) && !KaanHero.IsWeaponCharged && HasNetherBlade)
-            {
-                var energyRequired = ComboMenu.GetIntSlider("combo.useR.minEnergyBars") * 25;
-                if (energyRequired <= KaanHero.Energized.Energy)
-                {
-                    if (LastAbilityFired == null && RTarget != null)
-                    {
-                        var pred = TestPrediction.GetPrediction(myPos, RTarget, RRange, 0f, RRadius, RAirTime);
-                        if (pred.CanHit)
-                        {
-                            LocalPlayer.PressAbility(AbilitySlot.Ability6, true);
-                            LocalPlayer.EditAimPosition = true;
-                            LocalPlayer.Aim(pred.CastPosition);
-                            return;
-                        }
-                    }
-                }
-            }
-
-            if (ComboMenu.GetBoolean("combo.useEX1") && MiscUtils.CanCast(AbilitySlot.EXAbility1))
-            {
-                var energyRequired = ComboMenu.GetIntSlider("combo.useEX1.minEnergyBars") * 25;
-                if (energyRequired <= KaanHero.Energized.Energy)
-                {
-                    if (LastAbilityFired == null && M1Target != null)
-                    {
-                        LocalPlayer.PressAbility(AbilitySlot.EXAbility1, true);
-                        return;
-                    }
-                }
-            }
-
-            if (ComboMenu.GetBoolean("combo.useSpace") && MiscUtils.CanCast(AbilitySlot.Ability3))
-            {
-                if (LastAbilityFired == null && SpaceTarget != null)
-                {
-                    var pred = TestPrediction.GetPrediction(myPos, SpaceTarget, SpaceMaxRange, 0f, SpaceRadius, SpaceAirTime);
-                    if (pred.CanHit)
-                    {
-                        LocalPlayer.PressAbility(AbilitySlot.Ability3, true);
-                        LocalPlayer.EditAimPosition = true;
-                        LocalPlayer.Aim(pred.CastPosition);
-                        return;
-                    }
-                }
-            }
-
-            if (!IsInUltimate)
-            {
-                if (ComboMenu.GetBoolean("combo.useM1") && MiscUtils.CanCast(AbilitySlot.Ability1))
-                {
-                    if (LastAbilityFired == null && M1Target != null)
-                    {
-                        LocalPlayer.PressAbility(AbilitySlot.Ability1, true);
-                        LocalPlayer.EditAimPosition = true;
-                        LocalPlayer.Aim(M1Target.MapObject.Position);
-                        return;
-                    }
-                }
-            }
-            else
-            {
                 if (ComboMenu.GetBoolean("combo.ultiMode.useM1") && MiscUtils.CanCast(AbilitySlot.Ability1))
                 {
                     if (LastAbilityFired == null && M1Target != null)
@@ -538,6 +556,7 @@ namespace PipKaan
                         LocalPlayer.PressAbility(AbilitySlot.Ability1, true);
                         LocalPlayer.EditAimPosition = true;
                         LocalPlayer.Aim(M1Target.MapObject.Position);
+                        KaanDebug("Tried to use M1 in ultimate mode");
                         return;
                     }
                 }
@@ -608,20 +627,28 @@ namespace PipKaan
             {
                 var pos = new Vector2(150f, 100f);
                 Drawing.DrawString(pos, "Tenacious Demon: " + HasTenaciousDemon, UnityEngine.Color.cyan, ViewSpace.ScreenSpacePixels);
-                var pos2 = new Vector2(150f, 110f);
+                var pos2 = new Vector2(150f, 120f);
                 Drawing.DrawString(pos2, "Nether Blade: " + HasNetherBlade, UnityEngine.Color.cyan, ViewSpace.ScreenSpacePixels);
             }
 
             if (DebugMenu.GetBoolean("debug.trueERange"))
             {
-                var pos = new Vector2(150f, 120f);
+                var pos = new Vector2(150f, 140f);
                 Drawing.DrawString(pos, "True E Range: " + TrueERange, UnityEngine.Color.yellow, ViewSpace.ScreenSpacePixels);
             }
 
             if (DebugMenu.GetBoolean("debug.ultiStatus"))
             {
-                var pos = new Vector2(150f, 130f);
+                var pos = new Vector2(150f, 160f);
                 Drawing.DrawString(pos, "Ulti mode: " + IsInUltimate, UnityEngine.Color.cyan, ViewSpace.ScreenSpacePixels);
+            }
+
+            if (DebugMenu.GetBoolean("debug.isCasting"))
+            {
+                var pos = new Vector2(150f, 180f);
+                var isCasting = KaanHero.AbilitySystem.IsCasting;
+                var isChanneling = KaanHero.IsChanneling;
+                Drawing.DrawString(pos, "Is Casting: " + isCasting + " - Is Channeling: " + isChanneling, UnityEngine.Color.yellow, ViewSpace.ScreenSpacePixels);
             }
         }
 
@@ -681,6 +708,8 @@ namespace PipKaan
             DebugMenu.Add(new MenuCheckBox("debug.checkBattlerites", "Check battlerites status", false));
             DebugMenu.Add(new MenuCheckBox("debug.trueERange", "True E Range", false));
             DebugMenu.Add(new MenuCheckBox("debug.ultiStatus", "Ultimate status", false));
+            DebugMenu.Add(new MenuCheckBox("debug.isCasting", "Is casting?", false));
+            DebugMenu.Add(new MenuCheckBox("debug.abilityUsage", "Print 'tried to use X ability'?", true));
             if (_debugMode)
             {
                 KaanMenu.Add(DebugMenu);
@@ -741,6 +770,14 @@ namespace PipKaan
 
             closestProj = null;
             return false;
+        }
+
+        private static void KaanDebug(string message)
+        {
+            if (_debugMode && DebugMenu.GetBoolean("debug.abilityUsage"))
+            {
+                Logs.Info("[PipKaan Debug] " + message);
+            }
         }
 
         public void OnUnload()
