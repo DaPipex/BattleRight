@@ -242,6 +242,8 @@ namespace PipDeveloper
                 InGameObject.OnDestroy -= OnDestroy;
                 BuffDetector.OnGainBuff -= OnGainBuff;
                 BuffDetector.OnRemoveBuff -= OnRemoveBuff;
+
+                DidMatchInit = false;
             }
         }
 

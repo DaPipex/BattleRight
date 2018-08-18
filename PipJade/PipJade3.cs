@@ -31,7 +31,8 @@ namespace PipJade
         private static Menu JadeMenu;
         private static Menu KeysMenu, ComboMenu, DrawingsMenu, KSMenu;
 
-        private static Character JadeHero;
+        private static Character JadeHero => LocalPlayer.Instance;
+        private static string HeroName => "Gunner";
 
         private static AbilitySlot? LastAbilityFired = null;
 
@@ -71,7 +72,20 @@ namespace PipJade
         private static bool HasExplosiveJump;
         private static bool HasMagicBullet;
 
+        private static float TrueSpaceRange => !HasExplosiveJump ? SpaceRange : SpaceRange + (SpaceRange * 20f / 100f);
+        private static float TrueERange => !HasMagicBullet ? ERange : ERange + (ERange * 10f / 100f);
+
+        private static bool DidMatchInit = false;
+
         public void OnInit()
+        {
+            InitMenu();
+
+            Game.OnMatchStart += OnMatchStart;
+            Game.OnMatchEnd += OnMatchEnd;
+        }
+
+        private static void InitMenu()
         {
             JadeMenu = new Menu("pipjademenu", "DaPip's Jade");
 
@@ -129,30 +143,49 @@ namespace PipJade
             DrawingsMenu.Add(new MenuCheckBox("draw.rangeF.safeRange", "Draw F Safe-Range (Explosive Shells)", false));
             DrawingsMenu.Add(new MenuCheckBox("draw.escapeSkillsScreen", "Draw escape skills CDs on screen", true));
             DrawingsMenu.Add(new MenuCheckBox("draw.debugTestPred", "Debug Test Prediction", false));
-            DrawingsMenu.Add(new MenuCheckBox("draw.debugJumpToSafety", "Debug Jump to safety", false));
             JadeMenu.Add(DrawingsMenu);
 
             MainMenu.AddMenu(JadeMenu);
+        }
 
-            InGameObject.OnCreate += OnCreate;
-            InGameObject.OnDestroy += OnDestroy;
-            Game.OnMatchStart += args =>
+        private void OnMatchStart(EventArgs args)
+        {
+            if (JadeHero == null || !JadeHero.CharName.Equals(HeroName))
             {
-                foreach (var obj in SpecialCircleObjects)
-                {
-                    obj.Active = false;
-                }
-            };
-            Game.OnMatchEnd += args =>
+                return;
+            }
+
+            foreach (var obj in SpecialCircleObjects)
             {
-                foreach (var obj in SpecialCircleObjects)
-                {
-                    obj.Active = false;
-                }
-            };
+                obj.Active = false;
+            }
+
             Game.OnUpdate += OnUpdate;
             Game.OnDraw += OnDraw;
             Game.OnMatchStateUpdate += OnMatchStateUpdate;
+            InGameObject.OnCreate += OnCreate;
+            InGameObject.OnDestroy += OnDestroy;
+
+            if (Game.CurrentMatchState == MatchState.InRound)
+            {
+                GetBattlerites();
+            }
+
+            DidMatchInit = true;
+        }
+
+        private void OnMatchEnd(EventArgs args)
+        {
+            if (DidMatchInit)
+            {
+                Game.OnUpdate -= OnUpdate;
+                Game.OnDraw -= OnDraw;
+                Game.OnMatchStateUpdate -= OnMatchStateUpdate;
+                InGameObject.OnCreate -= OnCreate;
+                InGameObject.OnDestroy -= OnDestroy;
+
+                DidMatchInit = false;
+            }
         }
 
         private void OnCreate(InGameObject gameObject)
@@ -162,16 +195,11 @@ namespace PipJade
                 return;
             }
 
-            if (JadeHero.CharName != "Gunner")
+            var matchedSpecial = SpecialCircleObjects.FirstOrDefault(x => x.Name.Equals(gameObject.ObjectName));
+            if (matchedSpecial != null)
             {
-                return;
-            }
-
-            var baseObject = gameObject.Get<BaseGameObject>();
-            if (baseObject != null && baseObject.TeamId != JadeHero.BaseObject.TeamId)
-            {
-                var matchedSpecial = SpecialCircleObjects.FirstOrDefault(x => x.Name.Equals(gameObject.ObjectName));
-                if (matchedSpecial != null)
+                var baseObject = gameObject.Get<BaseGameObject>();
+                if (baseObject != null && baseObject.TeamId != JadeHero.BaseObject.TeamId)
                 {
                     matchedSpecial.Active = true;
                     matchedSpecial.Position = gameObject.Get<MapGameObject>().Position;
@@ -186,16 +214,11 @@ namespace PipJade
                 return;
             }
 
-            if (JadeHero.CharName != "Gunner")
+            var matchedSpecial = SpecialCircleObjects.FirstOrDefault(x => x.Name.Equals(gameObject.ObjectName));
+            if (matchedSpecial != null)
             {
-                return;
-            }
-
-            var baseObject = gameObject.Get<BaseGameObject>();
-            if (baseObject != null && baseObject.TeamId != JadeHero.BaseObject.TeamId)
-            {
-                var matchedSpecial = SpecialCircleObjects.FirstOrDefault(x => x.Name.Equals(gameObject.ObjectName));
-                if (matchedSpecial != null)
+                var baseObject = gameObject.Get<BaseGameObject>();
+                if (baseObject != null && baseObject.TeamId != JadeHero.BaseObject.TeamId)
                 {
                     matchedSpecial.Active = false;
                     matchedSpecial.Position = Vector2.Zero;
@@ -205,17 +228,17 @@ namespace PipJade
 
         private void OnMatchStateUpdate(MatchStateUpdate args)
         {
-            if (EntitiesManager.LocalPlayer.CharName != "Gunner")
+            if (JadeHero == null)
             {
                 return;
             }
 
-            if (args.OldMatchState == MatchState.BattleritePicking && args.NewMatchState != MatchState.BattleritePicking)
+            if (args.OldMatchState == MatchState.BattleritePicking || args.NewMatchState == MatchState.PreRound)
             {
                 GetBattlerites();
             }
 
-            if (args.NewMatchState == MatchState.PreRound)
+            if (args.NewMatchState == MatchState.InRound)
             {
                 foreach (var obj in SpecialCircleObjects)
                 {
@@ -226,6 +249,11 @@ namespace PipJade
 
         private static void GetBattlerites()
         {
+            if (JadeHero == null)
+            {
+                return;
+            }
+
             if (Battlerites.Any())
             {
                 Battlerites.Clear();
@@ -239,6 +267,10 @@ namespace PipJade
                     Battlerites.Add(br);
                 }
             }
+
+            HasDeadlyFocus = Battlerites.Any(x => x.Name == "DeadlyFocusUpgrade");
+            HasExplosiveJump = Battlerites.Any(x => x.Name == "ExplosiveJumpUpgrade");
+            HasMagicBullet = Battlerites.Any(x => x.Name == "MagicBulletUpgrade");
         }
 
         public void OnUnload()
@@ -248,16 +280,10 @@ namespace PipJade
 
         private void OnUpdate(EventArgs args)
         {
-            JadeHero = EntitiesManager.LocalPlayer;
-
-            if (JadeHero.CharName != "Gunner")
+            if (JadeHero.Living.IsDead)
             {
                 return;
             }
-
-            HasDeadlyFocus = Battlerites.Any(x => x.Name == "DeadlyFocusUpgrade");
-            HasExplosiveJump = Battlerites.Any(x => x.Name == "ExplosiveJumpUpgrade");
-            HasMagicBullet = Battlerites.Any(x => x.Name == "MagicBulletUpgrade");
 
             if (KeysMenu.GetKeybind("keys.combo"))
             {
@@ -306,7 +332,7 @@ namespace PipJade
             var M2_FTarget = TargetSelector.GetTarget(enemiesToTarget, targetMode, M2Range);
             var RTarget = TargetSelector.GetTarget(enemiesToTarget, targetMode, !ComboMenu.GetBoolean("combo.useR.closeRange") ? RRange : RRange / 2f);
             var ETarget = enemiesToTarget
-                .Where(x => x.IsValid && !x.Living.IsDead && (x.AbilitySystem.IsCasting || x.IsChanneling) && !x.IsCountering && x.Distance(JadeHero) < (!HasMagicBullet ? ERange : ERange + (ERange * 10f / 100f)))
+                .Where(x => x.IsValid && !x.Living.IsDead && (x.AbilitySystem.IsCasting || x.IsChanneling) && !x.IsCountering && x.Distance(JadeHero) < TrueERange)
                 .OrderBy(x => x.Distance(JadeHero))
                 .FirstOrDefault();
 
@@ -354,12 +380,7 @@ namespace PipJade
                     case AbilitySlot.Ability3: //Space
                         var priorityMode = ComboMenu.GetComboBox("combo.useSpace.direction");
                         var accuracy = ComboMenu.GetIntSlider("combo.useSpace.accuracy");
-                        var bestPosition = GetBestJumpPosition(priorityMode, accuracy);
-
-                        if (DrawingsMenu.GetBoolean("draw.debugJumpToSafety"))
-                        {
-                            Drawing.DrawCircleOneShot(bestPosition, 2f, UnityEngine.Color.yellow, 2f);
-                        }
+                        var bestPosition = MathUtils.GetBestJumpPosition(priorityMode, accuracy, TrueSpaceRange);
 
                         LocalPlayer.Aim(bestPosition);
                         break;
@@ -501,12 +522,7 @@ namespace PipJade
                 {
                     var priorityMode = ComboMenu.GetComboBox("combo.useSpace.direction");
                     var accuracy = ComboMenu.GetIntSlider("combo.useSpace.accuracy");
-                    var bestPosition = GetBestJumpPosition(priorityMode, accuracy);
-
-                    if (DrawingsMenu.GetBoolean("draw.debugJumpToSafety"))
-                    {
-                        Drawing.DrawCircleOneShot(bestPosition, 2f, UnityEngine.Color.yellow, 2f);
-                    }
+                    var bestPosition = MathUtils.GetBestJumpPosition(priorityMode, accuracy, TrueSpaceRange);
 
                     LocalPlayer.PressAbility(AbilitySlot.Ability3, true);
                     LocalPlayer.EditAimPosition = true;
@@ -765,7 +781,7 @@ namespace PipJade
                 return;
             }
 
-            if (JadeHero.CharName != "Gunner")
+            if (JadeHero.Living.IsDead)
             {
                 return;
             }
@@ -803,7 +819,7 @@ namespace PipJade
 
             if (DrawingsMenu.GetBoolean("draw.rangeSpace"))
             {
-                Drawing.DrawCircle(JadeHero.MapObject.Position, (!HasExplosiveJump ? SpaceRange : SpaceRange + (SpaceRange * 20f / 100f)), UnityEngine.Color.green);
+                Drawing.DrawCircle(JadeHero.MapObject.Position, TrueSpaceRange, UnityEngine.Color.green);
             }
 
             if (DrawingsMenu.GetBoolean("draw.rangeSpace.safeRange"))
@@ -813,7 +829,7 @@ namespace PipJade
 
             if (DrawingsMenu.GetBoolean("draw.rangeE"))
             {
-                Drawing.DrawCircle(JadeHero.MapObject.Position, (!HasMagicBullet ? ERange : ERange + (ERange * 10f / 100f)), UnityEngine.Color.red);
+                Drawing.DrawCircle(JadeHero.MapObject.Position, TrueERange, UnityEngine.Color.red);
             }
 
             if (DrawingsMenu.GetBoolean("draw.rangeR"))
@@ -875,11 +891,6 @@ namespace PipJade
                     }
                 }
             }
-
-            if (DrawingsMenu.GetBoolean("draw.debugJumpToSafety"))
-            {
-                Drawing.DrawString(new Vector2(100f, 1080f - 30f), "Direction: " + ComboMenu.GetComboBox("combo.useSpace.direction").ToString(), UnityEngine.Color.cyan, ViewSpace.ScreenSpacePixels);
-            }
         }
 
         private static AbilitySlot? CastingIndexToSlot(int index)
@@ -911,94 +922,6 @@ namespace PipJade
             }
 
             return null;
-        }
-
-        private static Vector2 GetBestJumpPosition(int towards, int pointsToConsider)
-        {
-            var allies = EntitiesManager.LocalTeam.Where(x => !x.IsLocalPlayer && !x.Living.IsDead);
-
-            var maxJumpDistance = !HasExplosiveJump ? SpaceRange : SpaceRange + (SpaceRange * 20f / 100f);
-
-            var alliesInRange = allies
-                .Where(x => x.Distance(JadeHero) <= maxJumpDistance)
-                .OrderByDescending(x => x.Distance(JadeHero));
-
-            var alliesNotInRange = allies
-                .Except(alliesInRange)
-                .OrderBy(x => x.Distance(JadeHero));
-
-
-            switch (towards)
-            {
-                case 0: //Closest to edge
-                    foreach (var ally in alliesInRange)
-                    {
-                        if (ally.EnemiesAroundAlive(4.5f) == 0)
-                        {
-                            return ally.MapObject.Position;
-                        }
-                    }
-
-                    foreach (var ally in alliesNotInRange)
-                    {
-                        if (Math.Abs(JadeHero.Distance(ally) - maxJumpDistance) <= 4.5f)
-                        {
-                            if (ally.EnemiesAroundAlive(4.5f) == 0)
-                            {
-                                return ally.MapObject.Position;
-                            }
-                        }
-                    }
-
-                    //No directly safe ally, lets find spots in our circumference
-                    List<Vector2> PossibleSafeSpots = new List<Vector2>();
-
-                    var sectorAngle = 2 * Math.PI / pointsToConsider;
-                    for (int i = 0; i < pointsToConsider; i++)
-                    {
-                        var angleIteration = sectorAngle * i;
-
-                        Vector2 point = new Vector2
-                        {
-                            X = (int)(JadeHero.MapObject.Position.X + maxJumpDistance * Math.Cos(angleIteration)),
-                            Y = (int)(JadeHero.MapObject.Position.Y + maxJumpDistance * Math.Sin(angleIteration))
-                        };
-
-                        PossibleSafeSpots.Add(point);
-                    }
-
-                    if (DrawingsMenu.GetBoolean("draw.debugJumpToSafety"))
-                    {
-                        foreach (var p in PossibleSafeSpots)
-                        {
-                            Drawing.DrawCircleOneShot(p, 1f, UnityEngine.Color.green, 2f);
-                        }
-                    }
-
-                    //No ally is safe, let's just find a safe spot in the circumference that is closest to the ally who in turn is closest to our jump distance
-
-                    var orderedByEdgeDistance = allies.OrderBy(x => Math.Abs(JadeHero.Distance(x) - maxJumpDistance));
-
-                    foreach (var ally in orderedByEdgeDistance)
-                    {
-                        var orderedPoints = PossibleSafeSpots.OrderBy(x => x.Distance(ally));
-                        foreach (var point in orderedPoints)
-                        {
-                            if (point.EnemiesAroundAlive(4.5f) == 0)
-                            {
-                                return point;
-                            }
-                        }
-                    }
-
-                    break;
-
-                case 1: // Straight to mouse pos
-                    return InputManager.MousePosition.ScreenToWorld();
-            }
-
-            //If all else fails, just return mousepos
-            return InputManager.MousePosition.ScreenToWorld();
         }
 
         private static bool WillCollideWithEnemyBubble(Vector2 fromPos, Vector2 toPos, float projRadius)

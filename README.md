@@ -3,7 +3,7 @@
 ## Working Addons/Libraries
 #### * PipJade
 
-#### * PipZander
+#### * PipKaan
 
 #### * PipDeveloper
 
@@ -12,4 +12,5 @@ Not to be used as a standalone addon.
 
 ## Outdated/Not working Addons/Libraries
 #### * PipLucie
-It's technically working, but not at the same level as PipJade or PipZander.
+
+#### * PipZander
