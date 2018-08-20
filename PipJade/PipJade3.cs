@@ -357,7 +357,7 @@ namespace PipJade
             }
 
             if (!isCastingOrChanneling && ComboMenu.GetBoolean("combo.useQ.reset") && MiscUtils.CanCast(AbilitySlot.Ability4)
-                && LocalPlayer.GetAbilityHudData(AbilitySlot.Ability2).CooldownLeft > 0f)
+                && LocalPlayer.GetAbilityHudData(AbilitySlot.Ability2).CooldownLeft > 2f)
             {
                 if (!useEX2)
                 {
