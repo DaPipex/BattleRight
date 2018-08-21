@@ -25,12 +25,30 @@ namespace PipLibrary.Utils
         {
             var abilityHudData = LocalPlayer.GetAbilityHudData(slot);
 
-            return abilityHudData != null && abilityHudData.CooldownLeft <= 0 && abilityHudData.EnergyCost <= EntitiesManager.LocalPlayer.Energized.Energy;
+            if (abilityHudData != null && abilityHudData.EnergyCost <= EntitiesManager.LocalPlayer.Energized.Energy)
+            {
+                if (abilityHudData.UsesCharges)
+                {
+                    return abilityHudData.ChargeCount > 0;
+                }
+                else
+                {
+                    return abilityHudData.CooldownLeft <= 0;
+                }
+            }
+
+            return false;
         }
 
-        public static int EnemiesAround(this InGameObject gameObj, float distance)
+        public static int EnemiesAroundAlive(this InGameObject gameObj, float distance)
         {
             return EntitiesManager.EnemyTeam.Count(x => !x.Living.IsDead && x.Distance(gameObj.Get<MapGameObject>().Position) <= distance);
+        }
+
+
+        public static int EnemiesAroundAlive(this Vector2 position, float distance)
+        {
+            return EntitiesManager.EnemyTeam.Count(x => !x.Living.IsDead && x.Distance(position) <= distance);
         }
 
         public static bool HasBuff(this Character player, string buffName, out Buff buff)
@@ -50,6 +68,22 @@ namespace PipLibrary.Utils
             return player.Buffs.Any(x => x.ObjectName.Equals(buffName));
         }
 
+        public static bool HasShield(this Character player)
+        {
+            return player.HasBuff("BulwarkBuff") || player.HasBuff("DivineShieldBuff");
+        }
+
+        public static bool HasParry(this Character player)
+        {
+            return player.HasBuff("GustBuff") || player.HasBuff("TimeBenderBuff");
+        }
+
+        public static bool HasHardCC(this Character player)
+        {
+            return player.HasCCOfType(CCType.Stun) || player.HasCCOfType(CCType.Snared) || player.HasCCOfType(CCType.Root);
+        }
+
+        [Obsolete]
         public static Vector2 TempScreenToWorld(this Vector2 screenPos)
         {
             var cam = UnityEngine.Camera.main;
