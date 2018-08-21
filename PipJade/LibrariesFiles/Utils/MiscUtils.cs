@@ -25,7 +25,19 @@ namespace PipLibrary.Utils
         {
             var abilityHudData = LocalPlayer.GetAbilityHudData(slot);
 
-            return abilityHudData != null && abilityHudData.CooldownLeft <= 0 && abilityHudData.EnergyCost <= EntitiesManager.LocalPlayer.Energized.Energy;
+            if (abilityHudData != null && abilityHudData.EnergyCost <= EntitiesManager.LocalPlayer.Energized.Energy)
+            {
+                if (abilityHudData.UsesCharges)
+                {
+                    return abilityHudData.ChargeCount > 0;
+                }
+                else
+                {
+                    return abilityHudData.CooldownLeft <= 0;
+                }
+            }
+
+            return false;
         }
 
         public static int EnemiesAroundAlive(this InGameObject gameObj, float distance)
@@ -58,12 +70,31 @@ namespace PipLibrary.Utils
 
         public static bool HasShield(this Character player)
         {
-            return player.HasBuff("BulwarkBuff") || player.HasBuff("DivineShieldBuff");
+            //return player.HasBuff("BulwarkBuff") || player.HasBuff("DivineShieldBuff");
+            return player.Buffs.Any(x => x.IsShield);
         }
 
         public static bool HasParry(this Character player)
         {
-            return player.HasBuff("GustBuff") || player.HasBuff("TimeBenderBuff");
+            //return player.HasBuff("GustBuff") || player.HasBuff("TimeBenderBuff");
+            return player.Buffs.Any(x => x.ObjectName.Equals("GustBuff") || x.ObjectName.Equals("TimeBenderBuff"));
+        }
+
+        public static bool IsParry(this Buff buff)
+        {
+            return buff.ObjectName.Equals("GustBuff") || buff.ObjectName.Equals("TimeBenderBuff");
+        }
+
+        public static bool IsImmaterial(this Buff buff)
+        {
+            return buff.ObjectName.Equals("OtherSideBuff") || buff.ObjectName.Equals("Fleetfoot")
+                || buff.ObjectName.Equals("TempestRushBuff");
+        }
+
+        public static bool HasProjectileBlocker(this Character player)
+        {
+            return player.Buffs.Any(x => x.IsImmaterial() 
+            || x.IsCounter || x.IsConsume || x.IsShield || x.IsParry());
         }
 
         public static bool HasHardCC(this Character player)

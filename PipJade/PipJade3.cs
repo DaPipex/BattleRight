@@ -75,6 +75,11 @@ namespace PipJade
         private static float TrueSpaceRange => !HasExplosiveJump ? SpaceRange : SpaceRange + (SpaceRange * 20f / 100f);
         private static float TrueERange => !HasMagicBullet ? ERange : ERange + (ERange * 10f / 100f);
 
+        private static float TrueM2Damage => !HasDeadlyFocus ? 38f : 38f + 5f;
+        private static float TrueEX1Damage => !HasDeadlyFocus ? 12f : 12f + 5f;
+
+        private static Vector2 MyPos => JadeHero.MapObject.Position;
+
         private static bool DidMatchInit = false;
 
         public void OnInit()
@@ -97,10 +102,8 @@ namespace PipJade
 
             ComboMenu = new Menu("combomenu", "Combo", true);
             ComboMenu.Add(new MenuCheckBox("combo.invisibleTargets", "Aim at invisible targets", true));
-            ComboMenu.Add(new MenuCheckBox("combo.noCounter", "Don't shoot if target is in countering/parries/consume", true));
-            ComboMenu.Add(new MenuCheckBox("combo.noShield", "Don't shoot if target has Bakko/Ulric shield", true));
             ComboMenu.Add(new MenuCheckBox("combo.noBubble", "Don't shoot if will go through a bubble (Pearl/Oldur)", true));
-            ComboMenu.Add(new MenuCheckBox("combo.interrupt", "Interrupt casting when no good target is available", true));
+            ComboMenu.Add(new MenuCheckBox("combo.interruptF", "Interrupt F casting when no good target is available", true));
             ComboMenu.Add(new MenuCheckBox("combo.useM1", "Use Left Mouse (Revolver Shot)", true));
             ComboMenu.Add(new MenuCheckBox("combo.useM2", "Use Right Mouse (Snipe) when in safe range", true));
             ComboMenu.Add(new MenuSlider("combo.useM2.safeRange", "    ^ Safe range", 7f, M2Range - 1f, 0f));
@@ -307,32 +310,21 @@ namespace PipJade
             var targetMode = targetModeKey ? TargetingMode.LowestHealth : TargetingMode.NearMouse;
 
             var invisibleTargets = ComboMenu.GetBoolean("combo.invisibleTargets");
-            var noCounter = ComboMenu.GetBoolean("combo.noCounter");
-            var noShield = ComboMenu.GetBoolean("combo.noShield");
             var noBubble = ComboMenu.GetBoolean("combo.noBubble");
 
-            var enemiesToTarget = EntitiesManager.EnemyTeam.Where(x => !x.PhysicsCollision.IsImmaterial);
+            var enemiesBase = EntitiesManager.EnemyTeam.Where(x => x.IsValid && !x.Living.IsDead);
+            var enemiesProj = enemiesBase.Where(x => !x.HasProjectileBlocker());
 
             if (!invisibleTargets)
             {
-                enemiesToTarget = enemiesToTarget.Where(x => !x.CharacterModel.IsModelInvisible);
+                enemiesProj = enemiesProj.Where(x => !x.CharacterModel.IsModelInvisible);
             }
 
-            if (noCounter)
-            {
-                enemiesToTarget = enemiesToTarget.Where(x => !x.IsCountering && !x.HasParry() && !x.HasConsumeBuff);
-            }
-
-            if (noShield)
-            {
-                enemiesToTarget = enemiesToTarget.Where(x => !x.HasShield());
-            }
-
-            var M1Target = TargetSelector.GetTarget(enemiesToTarget, targetMode, M1Range);
-            var M2_FTarget = TargetSelector.GetTarget(enemiesToTarget, targetMode, M2Range);
-            var RTarget = TargetSelector.GetTarget(enemiesToTarget, targetMode, !ComboMenu.GetBoolean("combo.useR.closeRange") ? RRange : RRange / 2f);
-            var ETarget = enemiesToTarget
-                .Where(x => x.IsValid && !x.Living.IsDead && (x.AbilitySystem.IsCasting || x.IsChanneling) && !x.IsCountering && x.Distance(JadeHero) < TrueERange)
+            var M1Target = TargetSelector.GetTarget(enemiesProj, targetMode, M1Range);
+            var M2_FTarget = TargetSelector.GetTarget(enemiesProj, targetMode, M2Range);
+            var RTarget = TargetSelector.GetTarget(enemiesProj, targetMode, !ComboMenu.GetBoolean("combo.useR.closeRange") ? RRange : RRange / 2f);
+            var ETarget = enemiesProj
+                .Where(x => (x.AbilitySystem.IsCasting || x.IsChanneling) && x.Distance(JadeHero) < TrueERange)
                 .OrderBy(x => x.Distance(JadeHero))
                 .FirstOrDefault();
 
@@ -369,8 +361,6 @@ namespace PipJade
                 }
             }
 
-            var myPos = JadeHero.MapObject.Position;
-
             if (isCastingOrChanneling)
             {
                 LocalPlayer.EditAimPosition = true;
@@ -388,11 +378,11 @@ namespace PipJade
                     case AbilitySlot.Ability5: //E
                         if (ETarget != null)
                         {
-                            var testPred = TestPrediction.GetNormalLinePrediction(myPos, ETarget, ERange, ESpeed, ERadius, true);
+                            var testPred = TestPrediction.GetNormalLinePrediction(MyPos, ETarget, ERange, ESpeed, ERadius, true);
 
                             if (testPred.CanHit)
                             {
-                                if (noBubble && WillCollideWithEnemyBubble(myPos, testPred.CastPosition, ERadius))
+                                if (noBubble && WillCollideWithEnemyBubble(MyPos, testPred.CastPosition, ERadius))
                                 {
                                     LocalPlayer.PressAbility(AbilitySlot.Interrupt, true);
                                 }
@@ -401,29 +391,37 @@ namespace PipJade
                                     LocalPlayer.Aim(testPred.CastPosition);
                                 }
                             }
-                        }
-                        else
-                        {
-                            if (ComboMenu.GetBoolean("combo.interrupt"))
+                            else
                             {
                                 LocalPlayer.PressAbility(AbilitySlot.Interrupt, true);
                             }
+                        }
+                        else
+                        {
+                            LocalPlayer.PressAbility(AbilitySlot.Interrupt, true);
                         }
                         break;
 
                     case AbilitySlot.Ability7: //F
                         if (M2_FTarget != null)
                         {
-                            var testPred = TestPrediction.GetNormalLinePrediction(myPos, M2_FTarget, M2Range, FSpeed, FRadius, true);
+                            var testPred = TestPrediction.GetNormalLinePrediction(MyPos, M2_FTarget, M2Range, FSpeed, FRadius, true);
 
                             if (testPred.CanHit)
                             {
                                 LocalPlayer.Aim(testPred.CastPosition);
                             }
+                            else
+                            {
+                                if (ComboMenu.GetBoolean("combo.interruptF"))
+                                {
+                                    LocalPlayer.PressAbility(AbilitySlot.Interrupt, true);
+                                }
+                            }
                         }
                         else
                         {
-                            if (ComboMenu.GetBoolean("combo.interrupt"))
+                            if (ComboMenu.GetBoolean("combo.interruptF"))
                             {
                                 LocalPlayer.PressAbility(AbilitySlot.Interrupt, true);
                             }
@@ -433,11 +431,11 @@ namespace PipJade
                     case AbilitySlot.Ability6: //R
                         if (RTarget != null)
                         {
-                            var testPred = TestPrediction.GetNormalLinePrediction(myPos, RTarget, RRange, RSpeed, RRadius, true);
+                            var testPred = TestPrediction.GetNormalLinePrediction(MyPos, RTarget, RRange, RSpeed, RRadius, true);
 
                             if (testPred.CanHit)
                             {
-                                if (noBubble && WillCollideWithEnemyBubble(myPos, testPred.CastPosition, RRadius))
+                                if (noBubble && WillCollideWithEnemyBubble(MyPos, testPred.CastPosition, RRadius))
                                 {
                                     LocalPlayer.PressAbility(AbilitySlot.Interrupt, true);
                                 }
@@ -446,13 +444,14 @@ namespace PipJade
                                     LocalPlayer.Aim(testPred.CastPosition);
                                 }
                             }
-                        }
-                        else
-                        {
-                            if (ComboMenu.GetBoolean("combo.interrupt"))
+                            else
                             {
                                 LocalPlayer.PressAbility(AbilitySlot.Interrupt, true);
                             }
+                        }
+                        else
+                        {
+                            LocalPlayer.PressAbility(AbilitySlot.Interrupt, true);
                         }
                         break;
 
@@ -460,11 +459,11 @@ namespace PipJade
                     case AbilitySlot.EXAbility1:
                         if (M2_FTarget != null)
                         {
-                            var testPred = TestPrediction.GetNormalLinePrediction(myPos, M2_FTarget, M2Range, M2Speed, M2Radius, true);
+                            var testPred = TestPrediction.GetNormalLinePrediction(MyPos, M2_FTarget, M2Range, M2Speed, M2Radius, true);
 
                             if (testPred.CanHit)
                             {
-                                if (noBubble && WillCollideWithEnemyBubble(myPos, testPred.CastPosition, M2Radius))
+                                if (noBubble && WillCollideWithEnemyBubble(MyPos, testPred.CastPosition, M2Radius))
                                 {
                                     LocalPlayer.PressAbility(AbilitySlot.Interrupt, true);
                                 }
@@ -473,24 +472,25 @@ namespace PipJade
                                     LocalPlayer.Aim(testPred.CastPosition);
                                 }
                             }
-                        }
-                        else
-                        {
-                            if (ComboMenu.GetBoolean("combo.interrupt"))
+                            else
                             {
                                 LocalPlayer.PressAbility(AbilitySlot.Interrupt, true);
                             }
+                        }
+                        else
+                        {
+                            LocalPlayer.PressAbility(AbilitySlot.Interrupt, true);
                         }
                         break;
 
                     case AbilitySlot.Ability1: //M1
                         if (M1Target != null)
                         {
-                            var testPred = TestPrediction.GetNormalLinePrediction(myPos, M1Target, M1Range, M1Speed, M1Radius, true);
+                            var testPred = TestPrediction.GetNormalLinePrediction(MyPos, M1Target, M1Range, M1Speed, M1Radius, true);
 
                             if (testPred.CanHit)
                             {
-                                if (noBubble && WillCollideWithEnemyBubble(myPos, testPred.CastPosition, M1Radius))
+                                if (noBubble && WillCollideWithEnemyBubble(MyPos, testPred.CastPosition, M1Radius))
                                 {
                                     LocalPlayer.PressAbility(AbilitySlot.Interrupt, true);
                                 }
@@ -499,13 +499,14 @@ namespace PipJade
                                     LocalPlayer.Aim(testPred.CastPosition);
                                 }
                             }
-                        }
-                        else
-                        {
-                            if (ComboMenu.GetBoolean("combo.interrupt"))
+                            else
                             {
                                 LocalPlayer.PressAbility(AbilitySlot.Interrupt, true);
                             }
+                        }
+                        else
+                        {
+                            LocalPlayer.PressAbility(AbilitySlot.Interrupt, true);
                         }
                         break;
                 }
@@ -535,11 +536,11 @@ namespace PipJade
             {
                 if (LastAbilityFired == null && ETarget != null)
                 {
-                    var testPred = TestPrediction.GetNormalLinePrediction(myPos, ETarget, ERange, ESpeed, ERadius, true);
+                    var testPred = TestPrediction.GetNormalLinePrediction(MyPos, ETarget, ERange, ESpeed, ERadius, true);
 
                     if (testPred.CanHit)
                     {
-                        if (noBubble && WillCollideWithEnemyBubble(myPos, testPred.CastPosition, ERadius))
+                        if (noBubble && WillCollideWithEnemyBubble(MyPos, testPred.CastPosition, ERadius))
                         {
                             //Do nothing
                         }
@@ -560,11 +561,11 @@ namespace PipJade
                 {
                     if (LastAbilityFired == null && M2_FTarget != null)
                     {
-                        var testPred = TestPrediction.GetNormalLinePrediction(myPos, M2_FTarget, M2Range, FSpeed, FRadius, true);
+                        var testPred = TestPrediction.GetNormalLinePrediction(MyPos, M2_FTarget, M2Range, FSpeed, FRadius, true);
 
                         if (testPred.CanHit)
                         {
-                            if (noBubble && WillCollideWithEnemyBubble(myPos, testPred.CastPosition, FRadius))
+                            if (noBubble && WillCollideWithEnemyBubble(MyPos, testPred.CastPosition, FRadius))
                             {
                                 //Do nothing
                             }
@@ -587,11 +588,11 @@ namespace PipJade
                 {
                     if (LastAbilityFired == null && RTarget != null)
                     {
-                        var testPred = TestPrediction.GetNormalLinePrediction(myPos, RTarget, RRange, RSpeed, RRadius, true);
+                        var testPred = TestPrediction.GetNormalLinePrediction(MyPos, RTarget, RRange, RSpeed, RRadius, true);
 
                         if (testPred.CanHit)
                         {
-                            if (noBubble && WillCollideWithEnemyBubble(myPos, testPred.CastPosition, RRadius))
+                            if (noBubble && WillCollideWithEnemyBubble(MyPos, testPred.CastPosition, RRadius))
                             {
                                 //Do nothing
                             }
@@ -614,11 +615,11 @@ namespace PipJade
                 {
                     if (LastAbilityFired == null && M2_FTarget != null)
                     {
-                        var testPred = TestPrediction.GetNormalLinePrediction(myPos, M2_FTarget, M2Range, M2Speed, M2Radius, true);
+                        var testPred = TestPrediction.GetNormalLinePrediction(MyPos, M2_FTarget, M2Range, M2Speed, M2Radius, true);
 
                         if (testPred.CanHit)
                         {
-                            if (noBubble && WillCollideWithEnemyBubble(myPos, testPred.CastPosition, M2Radius))
+                            if (noBubble && WillCollideWithEnemyBubble(MyPos, testPred.CastPosition, M2Radius))
                             {
                                 //Do nothing
                             }
@@ -638,11 +639,11 @@ namespace PipJade
                 {
                     if (LastAbilityFired == null && M2_FTarget != null)
                     {
-                        var testPred = TestPrediction.GetNormalLinePrediction(myPos, M2_FTarget, M2Range, M2Speed, M2Radius, true);
+                        var testPred = TestPrediction.GetNormalLinePrediction(MyPos, M2_FTarget, M2Range, M2Speed, M2Radius, true);
 
                         if (testPred.CanHit)
                         {
-                            if (noBubble && WillCollideWithEnemyBubble(myPos, testPred.CastPosition, M2Radius))
+                            if (noBubble && WillCollideWithEnemyBubble(MyPos, testPred.CastPosition, M2Radius))
                             {
                                 //Do nothing
                             }
@@ -660,11 +661,11 @@ namespace PipJade
             {
                 if (LastAbilityFired == null && M1Target != null)
                 {
-                    var testPred = TestPrediction.GetNormalLinePrediction(myPos, M1Target, M1Range, M1Speed, M1Radius, true);
+                    var testPred = TestPrediction.GetNormalLinePrediction(MyPos, M1Target, M1Range, M1Speed, M1Radius, true);
 
                     if (testPred.CanHit)
                     {
-                        if (noBubble && WillCollideWithEnemyBubble(myPos, testPred.CastPosition, M1Radius))
+                        if (noBubble && WillCollideWithEnemyBubble(MyPos, testPred.CastPosition, M1Radius))
                         {
                             //Do nothing
                         }
@@ -684,16 +685,18 @@ namespace PipJade
         {
             var invisibleEnemies = KSMenu.GetBoolean("ks.invisibleTargets");
 
-            var possibleEnemies = invisibleEnemies ? EntitiesManager.EnemyTeam.AsEnumerable() : EntitiesManager.EnemyTeam.Where(x => !x.CharacterModel.IsModelInvisible);
-            possibleEnemies = possibleEnemies.Where(x => x.IsValid && !x.Living.IsDead && !x.IsCountering && !x.HasConsumeBuff && !x.PhysicsCollision.IsImmaterial);
+            var possibleEnemies = EntitiesManager.EnemyTeam.Where(x => x.IsValid && !x.Living.IsDead && !x.HasProjectileBlocker());
 
-            var myPos = JadeHero.MapObject.Position;
+            if (!invisibleEnemies)
+            {
+                possibleEnemies = possibleEnemies.Where(x => !x.CharacterModel.IsModelInvisible);
+            }
 
             foreach (var enemy in possibleEnemies)
             {
-                if (KSMenu.GetBoolean("ks.useEX1") && LastAbilityFired == null && enemy.Living.Health <= (!HasDeadlyFocus ? 12f : 12f + 5f) && enemy.Distance(JadeHero) < M2Range && MiscUtils.CanCast(AbilitySlot.EXAbility1)) //EX1
+                if (KSMenu.GetBoolean("ks.useEX1") && LastAbilityFired == null && enemy.Living.Health <= (TrueEX1Damage) && enemy.Distance(JadeHero) < M2Range && MiscUtils.CanCast(AbilitySlot.EXAbility1)) //EX1
                 {
-                    var testPred = TestPrediction.GetNormalLinePrediction(myPos, enemy, M2Range, M2Speed, M2Radius, true);
+                    var testPred = TestPrediction.GetNormalLinePrediction(MyPos, enemy, M2Range, M2Speed, M2Radius, true);
 
                     if (testPred.CanHit)
                     {
@@ -703,7 +706,7 @@ namespace PipJade
 
                 if (KSMenu.GetBoolean("ks.useR") && LastAbilityFired == null && enemy.Living.Health <= 6f && enemy.Distance(JadeHero) < RRange && MiscUtils.CanCast(AbilitySlot.Ability6)) //R
                 {
-                    var testPred = TestPrediction.GetNormalLinePrediction(myPos, enemy, RRange, RSpeed, RRadius, true);
+                    var testPred = TestPrediction.GetNormalLinePrediction(MyPos, enemy, RRange, RSpeed, RRadius, true);
 
                     if (testPred.CanHit)
                     {
@@ -715,7 +718,7 @@ namespace PipJade
 
                 if (KSMenu.GetBoolean("ks.useR") && LastAbilityFired == null && enemy.Living.Health <= 6f * 3f && enemy.Distance(JadeHero) < 1.25f && MiscUtils.CanCast(AbilitySlot.Ability6)) //R
                 {
-                    var testPred = TestPrediction.GetNormalLinePrediction(myPos, enemy, RRange, RSpeed, RRadius, true);
+                    var testPred = TestPrediction.GetNormalLinePrediction(MyPos, enemy, RRange, RSpeed, RRadius, true);
 
                     if (testPred.CanHit)
                     {
@@ -743,11 +746,11 @@ namespace PipJade
 
             if (JadeHero.Distance(orbPos) <= M2Range)
             {
-                if (MiscUtils.CanCast(AbilitySlot.EXAbility1) && orbHealth <= (!HasDeadlyFocus ? 12f : 12f + 5f))
+                if (MiscUtils.CanCast(AbilitySlot.EXAbility1) && orbHealth <= (TrueEX1Damage))
                 {
                     LocalPlayer.PressAbility(AbilitySlot.EXAbility1, true);
                 }
-                else if (MiscUtils.CanCast(AbilitySlot.Ability2) && orbHealth > 6f * 4f && orbHealth <= (!HasDeadlyFocus ? 38f : 38f + 5f) && false)
+                else if (MiscUtils.CanCast(AbilitySlot.Ability2) && orbHealth > 6f * 4f && orbHealth <= (TrueM2Damage) && false)
                 {
                     LocalPlayer.PressAbility(AbilitySlot.Ability2, true);
                 }
