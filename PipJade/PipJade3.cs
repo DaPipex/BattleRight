@@ -32,7 +32,7 @@ namespace PipJade
         private static Menu KeysMenu, ComboMenu, DrawingsMenu, KSMenu;
 
         private static Character JadeHero => LocalPlayer.Instance;
-        private static string HeroName => "Gunner";
+        private static string HeroName => "Jade";
 
         private static AbilitySlot? LastAbilityFired = null;
 
