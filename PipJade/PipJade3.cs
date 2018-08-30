@@ -312,7 +312,7 @@ namespace PipJade
             var invisibleTargets = ComboMenu.GetBoolean("combo.invisibleTargets");
             var noBubble = ComboMenu.GetBoolean("combo.noBubble");
 
-            var enemiesBase = EntitiesManager.EnemyTeam.Where(x => x.IsValid && !x.Living.IsDead);
+            var enemiesBase = EntitiesManager.EnemyTeam.Where(x => x.IsValid && !x.Living.IsDead && !x.HasCollisionLineToPos(MyPos));
             var enemiesProj = enemiesBase.Where(x => !x.HasProjectileBlocker());
 
             if (!invisibleTargets)
@@ -733,6 +733,11 @@ namespace PipJade
         private static void OrbMode()
         {
             var orb = EntitiesManager.CenterOrb;
+            if (orb == null)
+            {
+                return;
+            }
+
             var orbHealth = orb.Get<LivingObject>().Health;
             var orbPos = orb.Get<MapGameObject>().Position;
 

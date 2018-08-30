@@ -102,6 +102,12 @@ namespace PipLibrary.Utils
             || x.IsCounter || x.IsConsume || x.IsReflectiveShield() || x.IsParry());
         }
 
+        public static bool HasCollisionLineToPos(this Character player, Vector2 targetPos)
+        {
+            var col = CollisionSolver.CheckLineCollision(player.MapObject.Position, targetPos);
+            return col.IsColliding;
+        }
+
         public static bool HasHardCC(this Character player)
         {
             return player.HasCCOfType(CCType.Stun) || player.HasCCOfType(CCType.Snared) || player.HasCCOfType(CCType.Root);
