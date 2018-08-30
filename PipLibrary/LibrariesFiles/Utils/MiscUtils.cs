@@ -68,10 +68,15 @@ namespace PipLibrary.Utils
             return player.Buffs.Any(x => x.ObjectName.Equals(buffName));
         }
 
-        public static bool HasShield(this Character player)
+        public static bool HasReflectiveShield(this Character player)
         {
             //return player.HasBuff("BulwarkBuff") || player.HasBuff("DivineShieldBuff");
-            return player.Buffs.Any(x => x.IsShield);
+            return player.Buffs.Any(x => x.ObjectName.Equals("BulwarkBuff") || x.ObjectName.Equals("DivineShieldBuff"));
+        }
+
+        public static bool IsReflectiveShield(this Buff buff)
+        {
+            return buff.ObjectName.Equals("BulwarkBuff") || buff.ObjectName.Equals("DivineShieldBuff");
         }
 
         public static bool HasParry(this Character player)
@@ -94,7 +99,7 @@ namespace PipLibrary.Utils
         public static bool HasProjectileBlocker(this Character player)
         {
             return player.Buffs.Any(x => x.IsImmaterial() 
-            || x.IsCounter || x.IsConsume || x.IsShield || x.IsParry());
+            || x.IsCounter || x.IsConsume || x.IsReflectiveShield() || x.IsParry());
         }
 
         public static bool HasHardCC(this Character player)
