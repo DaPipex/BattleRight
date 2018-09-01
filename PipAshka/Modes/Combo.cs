@@ -60,6 +60,7 @@ namespace PipAshka.Modes
         internal static void Update()
         {
             var invisibleTargets = ComboMenu.GetBoolean("invisible");
+            var interruptCast = ComboMenu.GetBoolean("interrupt");
             //TODO Bubble detection
             var enemiesBase = Utilities.EnemiesBase;
             var enemiesProj = enemiesBase.Where(x => !x.HasProjectileBlocker());
@@ -185,12 +186,18 @@ namespace PipAshka.Modes
                             }
                             else
                             {
-                                AH.Interrupt.Cast();
+                                if (interruptCast)
+                                {
+                                    AH.Interrupt.Cast();
+                                }
                             }
                         }
                         else
                         {
-                            AH.Interrupt.Cast();
+                            if (interruptCast)
+                            {
+                                AH.Interrupt.Cast();
+                            }
                         }
 
                         break;
@@ -205,12 +212,18 @@ namespace PipAshka.Modes
                             }
                             else
                             {
-                                AH.Interrupt.Cast();
+                                if (interruptCast)
+                                {
+                                    AH.Interrupt.Cast();
+                                }
                             }
                         }
                         else
                         {
-                            AH.Interrupt.Cast();
+                            if (interruptCast)
+                            {
+                                AH.Interrupt.Cast();
+                            }
                         }
 
                         break;

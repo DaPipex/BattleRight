@@ -31,6 +31,7 @@ namespace PipAshka.Utils
 
             ComboMenu = new Menu("combomenu", "Combo", true);
             ComboMenu.Add(new MenuCheckBox("invisible", "Attack invisible targets", true));
+            ComboMenu.Add(new MenuCheckBox("interrupt", "Interrupt M1 or M2 when target gets out of range", false));
             ComboMenu.Add(new MenuCheckBox("useM1", "Use M1 (Fireball)", true));
             ComboMenu.Add(new MenuCheckBox("useM1.priority", "    ^ Take priority over M2 and Q when M1 is enhanced", true));
             ComboMenu.Add(new MenuCheckBox("useM2", "Use M2 (Fire Storm)", true));
